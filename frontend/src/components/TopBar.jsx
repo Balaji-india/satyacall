@@ -6,12 +6,14 @@ import { useEffect, useState } from 'react'
 import { errorText, listPeople } from '../api'
 import { CLIP_SECONDS } from '../clipRecorder'
 import { customerPeerId } from '../peer'
+import { getSession } from '../session'
 import { IdentityBadge, StateBadge } from './Badges'
 import { AlertIcon } from './Icons'
 
 export default function TopBar({ call, m, onEnd }) {
   const [typedCustomerId, setCustomerId] = useState(null) // null = not chosen by hand yet
-  const [agentId, setAgentId] = useState('')
+  // Pre-set from the staff sign-in (B10): the bare employee ID; still editable.
+  const [agentId, setAgentId] = useState(() => getSession()?.employee_id ?? '')
   // GET /api/people → enrolled customers. null = loading; on error or an empty list → text input.
   const [customers, setCustomers] = useState(null)
   const [peopleError, setPeopleError] = useState('')

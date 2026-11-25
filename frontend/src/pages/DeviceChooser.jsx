@@ -21,13 +21,13 @@ export default function DeviceChooser() {
       <p className="text-center text-lg text-slate-500">This device is…</p>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Link to="/customer" className={`${TILE} hover:glow-stamp`}>
+        <Link to="/customer/login" className={`${TILE} hover:glow-stamp`}>
           <span className="grid h-14 w-14 place-items-center rounded-2xl bg-stamp/20 text-stamp glow-stamp"><PhoneIcon className="h-7 w-7" /></span>
           <span className="text-3xl font-bold font-stretch-expanded">Customer phone</span>
           <span className="text-lg text-slate-600">Call the bank, or check that someone calling you really is from the bank.</span>
         </Link>
 
-        <Link to="/agent" className={`${TILE} hover:glow-pass`}>
+        <Link to="/agent/login" className={`${TILE} hover:glow-pass`}>
           <span className="grid h-14 w-14 place-items-center rounded-2xl bg-tide/15 text-tide"><DeskIcon className="h-7 w-7" /></span>
           <span className="text-3xl font-bold font-stretch-expanded">Bank agent desk</span>
           <span className="text-lg text-slate-600">Take customer calls and see, clip by clip, whether the voice can be trusted.</span>

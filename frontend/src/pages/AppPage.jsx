@@ -5,6 +5,7 @@
 import { useEffect, useState } from 'react'
 import { errorText, listPeople, verifyCaller } from '../api'
 import { authenticityText, speakerText } from '../checkText'
+import { getSession } from '../session'
 import { useMicRecorder } from '../useMicRecorder'
 import { CheckIcon, StopIcon } from '../components/Icons'
 
@@ -20,7 +21,8 @@ const OFFICIAL_NUMBER = (import.meta.env.VITE_BANK_OFFICIAL_NUMBER ?? '').trim()
 export default function AppPage() {
   const [customers, setCustomers] = useState(null) // null = loading
   const [peopleError, setPeopleError] = useState('')
-  const [customerId, setCustomerId] = useState('')
+  // "Logged in as" starts as the signed-in customer (B10 demo sign-in); still editable.
+  const [customerId, setCustomerId] = useState(() => getSession()?.person_id ?? '')
   const [employeeId, setEmployeeId] = useState('')
   const [checking, setChecking] = useState(false)
   const [result, setResult] = useState(null)       // backend response

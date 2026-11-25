@@ -5,12 +5,14 @@ import { useState } from 'react'
 import CallPanel from '../components/CallPanel'
 import { usePeerCall } from '../usePeerCall'
 import { AGENT_PEER_ID, customerPeerId } from '../peer'
+import { getSession } from '../session'
 
 const BIG = 'w-full rounded-2xl py-5 text-xl font-semibold transition disabled:opacity-40 disabled:shadow-none'
 
 export default function CallPage() {
   const call = usePeerCall()
-  const [customerId, setCustomerId] = useState('')
+  // Pre-set from the demo sign-in (B10); still editable.
+  const [customerId, setCustomerId] = useState(() => getSession()?.person_id ?? '')
   const connecting = call.status === 'connecting'
   const online = call.status !== 'offline' && !connecting
 

@@ -4,12 +4,15 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { errorText, getHealth } from '../api'
+import { getSession } from '../session'
 import { ShieldIcon } from './Icons'
+import SignOutButton from './SignOutButton'
 
 export default function Header() {
   // null = still checking; { ok: true, data } or { ok: false, error } after the request
   const [health, setHealth] = useState(null)
   const onEnroll = useLocation().pathname === '/enroll'
+  const session = getSession()
 
   // Ask the backend once; the result (or the error) goes into state.
   const loadHealth = () =>
@@ -40,6 +43,14 @@ export default function Header() {
         <button onClick={checkHealth} disabled={health === null} className="glass ml-auto px-3 py-1.5 text-left text-sm" title="Click to re-check the backend">
           <HealthText health={health} />
         </button>
+
+        {/* Demo staff sign-in (B10): who is at this desk + Sign out. */}
+        {session?.role === 'agent' && (
+          <span className="flex items-center gap-2 text-sm text-white/70">
+            {session.display_name} · {session.employee_id}
+            <SignOutButton role="agent" />
+          </span>
+        )}
       </div>
     </header>
   )
