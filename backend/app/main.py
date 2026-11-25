@@ -7,8 +7,9 @@ from collections import defaultdict
 from contextlib import asynccontextmanager
 from typing import Literal, Optional
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from . import config, db, decision, detectif
@@ -24,6 +25,17 @@ app = FastAPI(title="SatyaCall Trust Engine", lifespan=lifespan)
 
 # Hackathon: frontend runs on the teammate's laptop -> allow all origins.
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+
+@app.exception_handler(Exception)
+async def unexpected_error(request: Request, exc: Exception):
+    """Any crash -> JSON 500 WITH the CORS header. Starlette sends unhandled 500s from outside the
+    CORS middleware, so without this the browser only sees 'Failed to fetch' instead of the error."""
+    return JSONResponse(
+        status_code=500,
+        content={"detail": {"code": "internal_error", "message": f"{type(exc).__name__}: {exc}"}},
+        headers={"Access-Control-Allow-Origin": "*"},
+    )
 
 
 # ---------- WebSocket hub: pushes results to the agent console ----------
@@ -64,6 +76,14 @@ def get_call(call_id: str) -> dict:
     if not row:
         raise HTTPException(404, f"call {call_id} not found")
     return dict(row)
+
+
+def next_clip_id() -> str:
+    """Global clip id k_<n> (PLAN §5 example 'k_12'): one higher than the highest id so far."""
+    row = db.conn.execute(
+        "SELECT MAX(CAST(SUBSTR(clip_id, 3) AS INTEGER)) FROM clips WHERE clip_id LIKE 'k\\_%' ESCAPE '\\'"
+    ).fetchone()
+    return f"k_{(row[0] or 0) + 1}"
 
 
 def customer_speaker_id(claimed_customer_id: str) -> str:
@@ -257,7 +277,9 @@ async def upload_clip(call_id: str, file: UploadFile = File(...), t_start: float
         new_state, reason = decision.next_call_state(call["state"], status, previous_status, was_verified)
 
         clip_result = {
-            "clip_id": f"k_{len(history) + 1}", "call_id": call_id, "t_start": t_start, "t_end": t_end,
+            # clip_id is unique across ALL calls (DB primary key). Computed right before the INSERT
+            # with no `await` in between, so two calls can never get the same id.
+            "clip_id": next_clip_id(), "call_id": call_id, "t_start": t_start, "t_end": t_end,
             "authenticity": check["authenticity"], "speaker": check["speaker"], "raw": check["raw"],
             "status": status, "call_state": new_state, "identity": identity,
             "latency_ms": outcome["latency_ms"], "clip_sha256": clip_sha256,
