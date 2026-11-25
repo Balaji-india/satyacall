@@ -1,6 +1,8 @@
 // App — header on every page + the four routes (docs/PLAN.md §4).
 import { Navigate, Route, Routes } from 'react-router-dom'
 import Header from './components/Header'
+import AgentPage from './pages/AgentPage'
+import CallPage from './pages/CallPage'
 import Placeholder from './pages/Placeholder'
 
 export default function App() {
@@ -10,14 +12,8 @@ export default function App() {
       <main className="mx-auto max-w-6xl p-4">
         <Routes>
           <Route path="/" element={<Navigate to="/agent" replace />} />
-          <Route path="/call" element={
-            <Placeholder title="Customer call" task="B2"
-              description="The customer calls the bank's agent desk over WebRTC (PeerJS)." />
-          } />
-          <Route path="/agent" element={
-            <Placeholder title="Agent console" task="B2–B4"
-              description="Live trust timeline, call state, Say-It-Back and evidence for the call." />
-          } />
+          <Route path="/call" element={<CallPage />} />
+          <Route path="/agent" element={<AgentPage />} />
           <Route path="/app" element={
             <Placeholder title="Bank app — Verify This Caller" task="B6"
               description="Customer checks whether a caller claiming to be from the bank is real." />

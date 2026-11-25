@@ -39,7 +39,12 @@ function postAudio(path, blob, fields = {}) {
 export const isInsufficientSpeech = (err) => err?.status === 422
 
 // GET /api/health → { ok, detectif_reachable, credits_balance }
-export const getHealth = () => request('/api/health')
+// Gives up after 5 s (AbortController) so the header shows "Backend unreachable" instead of hanging.
+export function getHealth() {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 5000)
+  return request('/api/health', { signal: controller.signal }).finally(() => clearTimeout(timer))
+}
 
 // POST /api/people/enroll — formFields: { person_id, display_name, role, phone? | employee_id?, department? }
 // → { person_id, speaker_id, samples, speech_seconds }
