@@ -277,3 +277,57 @@ async def upload_clip(call_id: str, file: UploadFile = File(...), t_start: float
         await hub.send(call_id, {"type": "state_change",
                                  "data": {"from": call["state"], "to": new_state, "reason": reason}})
     return clip_result
+
+
+# ---------- A5: actions ----------
+
+ActionType = Literal["balance", "card_status", "statement", "complaint_status", "branch_info",
+                     "add_payee", "change_mobile", "change_email", "change_address", "reset_credentials",
+                     "raise_limit", "large_transfer", "card_new_address", "unblock"]
+
+
+class NewAction(BaseModel):
+    action_type: ActionType
+    params: dict = {}
+
+
+@app.post("/api/calls/{call_id}/action")
+async def request_action(call_id: str, body: NewAction):
+    """Agent asks for an action -> { risk, decision: allow | say_it_back | fallback, sentence? }."""
+    call = get_call(call_id)
+    if call["ended_at"]:
+        raise HTTPException(409, "call has ended")
+
+    # Say-It-Back needs: an enrolled customer (Eidos compares against them), credits above the
+    # floor (v3 rule 7), and fewer than 2 failed attempts on this call (v3 rule 5 -> then fallback).
+    customer = db.conn.execute(
+        "SELECT display_name FROM people WHERE role = 'customer' AND (person_id = ? OR speaker_id = ?)",
+        (call["claimed_customer_id"], call["claimed_customer_id"]),
+    ).fetchone()
+    balance = detectif.last_balance()
+    above_floor = balance is None or balance >= config.CREDIT_FLOOR
+    failed_twice = db.conn.execute(
+        "SELECT 1 FROM say_it_back WHERE call_id = ? AND attempt >= 2 AND pass = 0", (call_id,)
+    ).fetchone() is not None
+    can_say_it_back = bool(customer) and above_floor and not failed_twice
+
+    risk, result = decision.action_decision(body.action_type, call["state"], can_say_it_back)
+
+    sentence = None
+    if result == "say_it_back":
+        try:
+            sentence = decision.say_it_back_sentence(customer["display_name"], body.action_type, body.params)
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+
+    db.conn.execute(
+        "INSERT INTO actions (call_id, action_type, params_json, risk, decision, sentence, created_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (call_id, body.action_type, json.dumps(body.params), risk, result, sentence, db.now()),
+    )
+    db.conn.commit()
+
+    response = {"risk": risk, "decision": result}
+    if sentence:
+        response["sentence"] = sentence
+    return response
