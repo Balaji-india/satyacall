@@ -542,3 +542,66 @@ async def verify_caller(file: UploadFile = File(...), employee_id: str = Form(..
     save_evidence(log_row["call_id"] if log_row else None, "verify_caller",
                   hashlib.sha256(audio).hexdigest(), outcome, "verified" if verified else "not_verified")
     return result
+
+
+# ---------- A8: call record, evidence export, feedback ----------
+
+def call_record(call_id: str) -> dict:
+    """Everything stored for one call (PLAN §5: { call, clips, actions, say_it_back, state })."""
+    call = get_call(call_id)
+    clips = [json.loads(r["result_json"]) for r in db.conn.execute(
+        "SELECT result_json FROM clips WHERE call_id = ? ORDER BY rowid", (call_id,))]
+    actions = [{"action_type": r["action_type"], "params": json.loads(r["params_json"] or "{}"), "risk": r["risk"],
+                "decision": r["decision"], "sentence": r["sentence"], "created_at": r["created_at"]}
+               for r in db.conn.execute("SELECT * FROM actions WHERE call_id = ? ORDER BY id", (call_id,))]
+    say_it_back_rows = []
+    for r in db.conn.execute("SELECT * FROM say_it_back WHERE call_id = ? ORDER BY id", (call_id,)):
+        data = json.loads(r["result_json"] or "{}")
+        data.pop("raw", None)                    # raw DetectifAI responses live in the evidence export
+        say_it_back_rows.append({"attempt": r["attempt"], "created_at": r["created_at"], **data})
+    return {"call": call, "clips": clips, "actions": actions, "say_it_back": say_it_back_rows, "state": call["state"]}
+
+
+@app.get("/api/calls/{call_id}")
+async def get_call_record(call_id: str):
+    return call_record(call_id)
+
+
+@app.get("/api/calls/{call_id}/evidence")
+async def download_evidence(call_id: str):
+    """JSON file: the call record + every DetectifAI check (time, clip SHA-256, operation ids, verdicts,
+    scores, thresholds, raw response, our decision, latency, credits) — PLAN §3 evidence log."""
+    record = call_record(call_id)
+    checks = [{"kind": r["kind"], **json.loads(r["data_json"])} for r in db.conn.execute(
+        "SELECT kind, data_json FROM evidence WHERE call_id = ? ORDER BY id", (call_id,))]
+    export = {
+        "exported_at": db.now(),
+        "note": "DetectifAI verdicts/decisions are signals, not proof: a person should review decisions that matter.",
+        **record,
+        "evidence": checks,
+    }
+    return JSONResponse(export, headers={"Content-Disposition": f'attachment; filename="satyacall-{call_id}-evidence.json"'})
+
+
+class Feedback(BaseModel):
+    operation_id: str
+    correct: bool
+    label: Optional[Literal["real", "fake"]] = None
+    note: Optional[str] = None
+
+
+@app.post("/api/feedback")
+async def send_feedback(body: Feedback):
+    """'Was this right?' -> DetectifAI POST /v1/operations/{id}/feedback (free). Returns DetectifAI's response."""
+    result = await detectif.feedback(body.operation_id, body.correct, body.label, body.note)
+    status = result["status_code"]
+    if not 200 <= status < 300:
+        err = result["body"].get("error") if isinstance(result["body"], dict) else None
+        detail = {"code": (err or {}).get("code") or f"http_{status}", "message": (err or {}).get("message") or "feedback failed"}
+        raise HTTPException(status if 400 <= status < 600 else 502, detail)
+    db.conn.execute("INSERT INTO evidence (call_id, kind, clip_sha256, data_json, created_at) VALUES (?, ?, ?, ?, ?)",
+                    (None, "feedback", None, json.dumps({"time": db.now(), "operation_id": body.operation_id,
+                                                         "correct": body.correct, "label": body.label,
+                                                         "response": result["body"]}), db.now()))
+    db.conn.commit()
+    return result["body"]
