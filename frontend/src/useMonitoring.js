@@ -15,6 +15,7 @@ const sayItBackKey = (r) =>
 export function useMonitoring(remoteStream) {
   const [phase, setPhase] = useState('idle')     // idle → starting → live → ending → ended
   const [callId, setCallId] = useState(null)
+  const [direction, setDirection] = useState(null) // direction sent for the current call
   const [paused, setPaused] = useState(false)
   const [holding, setHolding] = useState(false)  // true while Say-It-Back owns the call (timeline paused)
   const [results, setResults] = useState({})     // clip_id → ClipResult (HTTP + WS merged, no duplicates)
@@ -91,11 +92,13 @@ export function useMonitoring(remoteStream) {
   // the same — safe to hand to the recorder, the WebSocket and effects.
 
   // "Start monitoring": create the call on the backend, then open the WebSocket.
-  const start = async ({ claimed_customer_id, agent_id }) => {
+  // direction: 'outbound' only when the agent placed the call (backend then writes the bank call log).
+  const start = async ({ direction = 'inbound', claimed_customer_id, agent_id }) => {
     setError('')
     setPhase('starting')
     try {
-      const { call_id } = await startCall({ direction: 'inbound', claimed_customer_id, agent_id })
+      const { call_id } = await startCall({ direction, claimed_customer_id, agent_id })
+      setDirection(direction)
       // Fresh session (a previous call's results are cleared).
       setResults({}); setUploads([]); setSayItBacks([]); setCallState(null); setStateReason('')
       setIdentity(null); setCredits(null); setLastClip(null); setPaused(false); setHolding(false)
@@ -188,7 +191,7 @@ export function useMonitoring(remoteStream) {
   ].sort((a, b) => a.t_start - b.t_start)
 
   return {
-    phase, callId, paused, holding, rows, sayItBacks, callState, stateReason, identity, credits,
+    phase, callId, direction, paused, holding, rows, sayItBacks, callState, stateReason, identity, credits,
     lastClip, wsStatus, error,
     start, end, togglePause, withTimelinePaused, addSayItBack,
   }

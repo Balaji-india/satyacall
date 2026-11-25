@@ -4,10 +4,11 @@
 import { useEffect, useState } from 'react'
 import { errorText, listPeople } from '../api'
 import { CLIP_SECONDS } from '../clipRecorder'
+import { customerPeerId } from '../peer'
 import { IdentityBadge, StateBadge } from './Badges'
 
 export default function TopBar({ call, m, onEnd }) {
-  const [customerId, setCustomerId] = useState('')
+  const [typedCustomerId, setCustomerId] = useState(null) // null = not chosen by hand yet
   const [agentId, setAgentId] = useState('')
   // GET /api/people → enrolled customers. null = loading; on error or an empty list → text input.
   const [customers, setCustomers] = useState(null)
@@ -19,6 +20,16 @@ export default function TopBar({ call, m, onEnd }) {
       .catch((err) => { setCustomers([]); setPeopleError(errorText(err)) })
   }, [])
 
+  // Outbound call to "satyacall-customer-<id>" → that <id> is the claimed customer (same id the
+  // call log stores, and the one the customer's /app sends). The agent can still change it.
+  const prefix = customerPeerId('')
+  const outboundCustomer = call.direction === 'outbound' && call.otherId.startsWith(prefix)
+    ? call.otherId.slice(prefix.length) : ''
+  const customerId = typedCustomerId ?? outboundCustomer
+
+  // Only a call WE placed from the "Outbound call" box is outbound; answered calls stay inbound.
+  const direction = call.direction === 'outbound' ? 'outbound' : 'inbound'
+
   const inCall = call.status === 'in-call'
   const live = m.phase === 'live'
   const canStart = inCall && (m.phase === 'idle' || m.phase === 'ended')
@@ -26,7 +37,7 @@ export default function TopBar({ call, m, onEnd }) {
 
   const onStart = (e) => {
     e.preventDefault()
-    m.start({ claimed_customer_id: customerId.trim(), agent_id: agentId.trim() })
+    m.start({ direction, claimed_customer_id: customerId.trim(), agent_id: agentId.trim() })
   }
 
   return (
@@ -50,13 +61,16 @@ export default function TopBar({ call, m, onEnd }) {
                 title={customers === null ? 'Loading customers…' : peopleError
                   ? `Could not load customers (${peopleError}) — type the id` : 'No enrolled customers — type the id'} />
             )}
-            <label htmlFor="agent" className="text-slate-600">Agent id</label>
+            {/* The call log stores this exactly as typed; the customer's /app types the same
+                employee ID, so use the bare number (e.g. 4521), not the speaker id emp-4521. */}
+            <label htmlFor="agent" className="text-slate-600">Employee ID</label>
             <input id="agent" value={agentId} onChange={(e) => setAgentId(e.target.value)}
-              placeholder="emp-4521" className="w-28 rounded border px-2 py-1" />
+              placeholder="4521" className="w-28 rounded border px-2 py-1" />
             <button disabled={!canStart || !customerId.trim() || !agentId.trim()}
               className="rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-40">
               {m.phase === 'starting' ? 'Starting…' : 'Start monitoring'}
             </button>
+            {inCall && <span className="text-slate-500">{direction}{direction === 'outbound' && ' (writes bank call log)'}</span>}
             {!inCall && <span className="text-slate-500">connect a call first</span>}
           </form>
         )}
@@ -64,6 +78,9 @@ export default function TopBar({ call, m, onEnd }) {
         {m.callId && (
           <>
             <span className="font-mono text-sm text-slate-500">call {m.callId}</span>
+            <span className="text-sm text-slate-500">
+              {m.direction === 'outbound' ? 'outbound — logged' : m.direction}
+            </span>
             <StateBadge state={m.callState} />
             <IdentityBadge identity={m.identity} />
           </>

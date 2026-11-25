@@ -1,12 +1,13 @@
 // useMicRecorder — record ONE long sample from the local mic (enrollment, B5).
 // One MediaRecorder for the whole recording → one complete .webm file. Stops by itself after
 // maxSeconds, or earlier with stop(). onDone(blob, seconds) gets the finished recording.
+// audio = getUserMedia audio constraints (default true; /app turns off echo cancellation etc.).
 import { useEffect, useRef, useState } from 'react'
 import { micErrorText } from './peer'
 
 const MIME = 'audio/webm;codecs=opus'
 
-export function useMicRecorder(maxSeconds, onDone) {
+export function useMicRecorder(maxSeconds, onDone, audio = true) {
   const [recording, setRecording] = useState(false)
   const [elapsed, setElapsed] = useState(0)  // whole seconds recorded so far (for the countdown)
   const [error, setError] = useState('')
@@ -31,7 +32,7 @@ export function useMicRecorder(maxSeconds, onDone) {
     }
     let stream
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      stream = await navigator.mediaDevices.getUserMedia({ audio })
     } catch (err) {
       return setError(micErrorText(err))
     }

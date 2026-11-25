@@ -12,6 +12,7 @@ export function usePeerCall() {
   const [myId, setMyId] = useState('')
   const [otherId, setOtherId] = useState('')        // who we're calling / talking to
   const [incoming, setIncoming] = useState(false)   // true = incoming call waiting for "Answer"
+  const [direction, setDirection] = useState('')    // 'inbound' (they called us) | 'outbound' (we called)
   const [remoteStream, setRemoteStream] = useState(null) // OTHER side's audio (B3 records this)
   const [muted, setMuted] = useState(false)
   const [error, setError] = useState('')
@@ -71,6 +72,7 @@ export function usePeerCall() {
     peer.on('call', (call) => {
       if (callRef.current) return call.close()
       watchCall(call)
+      setDirection('inbound')
       setIncoming(true)
       setStatus('ringing')
     })
@@ -110,6 +112,7 @@ export function usePeerCall() {
     const call = peer.call(remoteId, micRef.current)
     if (!call) return setError('Could not start the call (lost the peer server?). Try again.')
     watchCall(call)
+    setDirection('outbound')
     setStatus('ringing')
   }
 
@@ -134,5 +137,5 @@ export function usePeerCall() {
     setMuted(next)
   }
 
-  return { status, myId, otherId, incoming, remoteStream, muted, error, goOnline, callPeer, answer, hangUp, toggleMute }
+  return { status, myId, otherId, incoming, direction, remoteStream, muted, error, goOnline, callPeer, answer, hangUp, toggleMute }
 }
