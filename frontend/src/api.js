@@ -35,14 +35,24 @@ function postAudio(path, blob, fields = {}) {
   return request(path, { method: 'POST', body: form })
 }
 
+// Error → one line for the UI: "HTTP 409: call has ended…" or "network error — …".
+// The message is the backend's own text (FastAPI puts it in body.detail).
+export function errorText(err) {
+  if (!err?.status) return `network error — ${err?.message ?? err}`
+  const body = err.body
+  const msg = typeof body === 'string' ? body : body?.detail ?? body?.message ?? body?.error ?? body
+  return `HTTP ${err.status}: ${typeof msg === 'string' ? msg : JSON.stringify(msg)}`
+}
+
 // True when the backend said "not enough speech in this clip" (free, not an error).
 export const isInsufficientSpeech = (err) => err?.status === 422
 
 // GET /api/health → { ok, detectif_reachable, credits_balance }
-// Gives up after 5 s (AbortController) so the header shows "Backend unreachable" instead of hanging.
+// Gives up after 15 s (AbortController) so the header shows "Backend unreachable" instead of
+// hanging. 15 s because the backend's health check pings DetectifAI, which is slow on our hotspot.
 export function getHealth() {
   const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), 5000)
+  const timer = setTimeout(() => controller.abort(), 15000)
   return request('/api/health', { signal: controller.signal }).finally(() => clearTimeout(timer))
 }
 

@@ -7,8 +7,10 @@ import Peer from 'peerjs'
 const HOST = import.meta.env.VITE_PEER_HOST
 const PORT = import.meta.env.VITE_PEER_PORT
 
-// The bank's agent desk always uses this peer id; customers are "customer-<id>".
-export const AGENT_PEER_ID = 'agent-desk'
+// Peer ids live on the PUBLIC PeerJS cloud, so they carry a "satyacall-" prefix to avoid
+// clashing with other people's apps. Agent desk = one fixed id; customers = prefix + their id.
+export const AGENT_PEER_ID = 'satyacall-agent-desk'
+export const customerPeerId = (customerId) => `satyacall-customer-${customerId}`
 
 export function createPeer(id) {
   if (!HOST) return new Peer(id)

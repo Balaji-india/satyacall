@@ -18,7 +18,7 @@ export function usePeerCall() {
 
   // We keep StrictMode. The Peer is created on a button click (not in an effect), and this
   // cleanup destroys it on unmount / route change / hot reload, so the server frees the id
-  // and the next Peer("agent-desk") doesn't fail with "unavailable-id".
+  // and the next Peer("satyacall-agent-desk") doesn't fail with "unavailable-id".
   useEffect(() => () => {
     peerRef.current?.destroy()
     micRef.current?.getTracks().forEach((t) => t.stop())
