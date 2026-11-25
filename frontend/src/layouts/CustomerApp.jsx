@@ -24,7 +24,7 @@ export default function CustomerApp() {
       </div>
 
       {/* Bottom tab bar, like a banking app. Active tab = indigo text + bar on top. */}
-      <nav role="tablist" className="sticky bottom-0 grid grid-cols-2 border-t bg-[#0a1224]/90 backdrop-blur">
+      <nav role="tablist" className="sticky bottom-0 grid grid-cols-2 border-t bg-night/90 backdrop-blur">
         {TABS.map(([key, label]) => (
           <button key={key} role="tab" aria-selected={tab === key}
             onClick={() => setParams({ tab: key }, { replace: true })}

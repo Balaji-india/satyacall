@@ -6,6 +6,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { errorText, getHealth } from '../api'
 import { getSession } from '../session'
 import { ShieldIcon } from './Icons'
+import ReduceEffectsToggle from './ReduceEffectsToggle'
 import SignOutButton from './SignOutButton'
 
 export default function Header() {
@@ -39,8 +40,10 @@ export default function Header() {
           ? <Link to="/agent" className="text-sm text-white/70 underline hover:text-white">Back to agent desk</Link>
           : <Link to="/enroll" className="text-sm text-white/70 underline hover:text-white">Enroll (admin)</Link>}
 
+        <span className="ml-auto"><ReduceEffectsToggle /></span>
+
         {/* Glass chip; green/red text = the real backend status. */}
-        <button onClick={checkHealth} disabled={health === null} className="glass ml-auto px-3 py-1.5 text-left text-sm" title="Click to re-check the backend">
+        <button onClick={checkHealth} disabled={health === null} className="glass px-3 py-1.5 text-left text-sm" title="Click to re-check the backend">
           <HealthText health={health} />
         </button>
 

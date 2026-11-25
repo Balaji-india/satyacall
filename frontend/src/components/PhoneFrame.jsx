@@ -1,6 +1,7 @@
 // PhoneFrame — the customer's "SatyaBank" phone: phone-shaped frame on a laptop, full screen on a
 // real phone. Used by the customer app and its sign-in page. `right` = header slot (Sign out).
 import { ShieldIcon } from './Icons'
+import ReduceEffectsToggle from './ReduceEffectsToggle'
 
 export default function PhoneFrame({ right, children }) {
   return (
@@ -12,7 +13,7 @@ export default function PhoneFrame({ right, children }) {
         <header className="relative flex items-center gap-2 px-5 pb-3 pt-4">
           <span className="grid h-9 w-9 place-items-center rounded-xl bg-stamp/20 text-stamp glow-stamp"><ShieldIcon className="h-5 w-5" /></span>
           <p className="text-glow text-2xl font-bold tracking-tight font-stretch-expanded">SatyaBank</p>
-          {right && <div className="ml-auto">{right}</div>}
+          <div className="ml-auto flex items-center gap-2"><ReduceEffectsToggle />{right}</div>
         </header>
         {children}
       </div>

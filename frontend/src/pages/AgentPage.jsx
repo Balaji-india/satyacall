@@ -9,6 +9,7 @@ import RequestPanel from '../components/RequestPanel'
 import TopBar from '../components/TopBar'
 import TrustTimeline from '../components/TrustTimeline'
 import { AGENT_PEER_ID, customerPeerId } from '../peer'
+import { useCalmWhile } from '../effects'
 import { useMonitoring } from '../useMonitoring'
 import { usePeerCall } from '../usePeerCall'
 
@@ -18,6 +19,7 @@ export default function AgentPage() {
   const m = useMonitoring(call.remoteStream)
   const [customerId, setCustomerId] = useState('')
   const online = call.status !== 'offline' && call.status !== 'connecting'
+  useCalmWhile(m.phase === 'live') // recording clips → background animation off (visual only)
 
   // One action ends both: "End call" and "Hang up" stop monitoring (POST /end) AND close the
   // PeerJS call. m.end() marks the call as ending first, so no clip is uploaded after it.
@@ -62,7 +64,7 @@ export default function AgentPage() {
 
       {m.callId && (
         <div className="grid gap-4 lg:grid-cols-3">
-          <div className="glass min-w-0 space-y-3 p-4 lg:col-span-2">
+          <div className="glass radar min-w-0 space-y-3 p-4 lg:col-span-2">
             <h2 className="text-xl font-semibold">Trust timeline</h2>
             <TrustTimeline rows={m.rows} />
             <details>

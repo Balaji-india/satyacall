@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import { errorText, listPeople, verifyCaller } from '../api'
 import { authenticityText, speakerText } from '../checkText'
 import { getSession } from '../session'
+import { useCalmWhile } from '../effects'
 import { useMicRecorder } from '../useMicRecorder'
 import { CheckIcon, StopIcon } from '../components/Icons'
 
@@ -47,6 +48,7 @@ export default function AppPage() {
     }
   }
   const mic = useMicRecorder(RECORD_SECONDS, send, MIC)
+  useCalmWhile(mic.recording) // visual only: background animation off while recording
 
   const start = () => { setResult(null); setError(''); mic.start() }
   // Changing who / which ID makes an old answer wrong → clear it.

@@ -4,6 +4,7 @@
 // threshold from the latest response — evidence only; the backend decides with `verdict`.
 import { Bar, BarChart, CartesianGrid, Cell, ReferenceArea, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { authenticityText, speakerText } from '../checkText'
+import { useCalm } from '../effects'
 
 // Status colours (fixed meaning, always shown with a text label in the legend / tooltip).
 const COLOUR = { green: '#0ca30c', amber: '#fab219', red: '#d03b3b' }
@@ -28,6 +29,7 @@ function noScoreText(row) {
 }
 
 export default function TrustTimeline({ rows }) {
+  const calm = useCalm() // call active or "Reduce effects" → no bar animation (saves CPU)
   if (rows.length === 0) {
     return <p className="text-sm text-slate-500">No clips yet — the first bar appears about 10 s after monitoring starts.</p>
   }
@@ -77,7 +79,7 @@ export default function TrustTimeline({ rows }) {
             {/* minPointSize: a real voice scores ~0.003, so give real bars a 3 px sliver to stay
                 visible. Bars with no score (null) get 0 → nothing drawn. Bars rise in with Recharts'
                 own animation; the glow is a drop-shadow in the bar's own status colour. */}
-            <Bar dataKey="score" isAnimationActive animationDuration={700} animationEasing="ease-out" radius={[4, 4, 0, 0]} maxBarSize={48}
+            <Bar dataKey="score" isAnimationActive={!calm} animationDuration={700} animationEasing="ease-out" radius={[4, 4, 0, 0]} maxBarSize={48}
               minPointSize={(value) => (value == null ? 0 : 3)}>
               {data.map((d) => <Cell key={d.label} fill={COLOUR[d.status] ?? GREY}
                 style={{ filter: `drop-shadow(0 0 6px ${COLOUR[d.status] ?? GREY})` }} />)}
