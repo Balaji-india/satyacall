@@ -2,6 +2,7 @@
 import asyncio
 import hashlib
 import json
+import re
 from collections import defaultdict
 from contextlib import asynccontextmanager
 from typing import Literal, Optional
@@ -99,6 +100,92 @@ async def health():
     reachable = await detectif.ping()
     return {"ok": True, "detectif_reachable": reachable, "credits_balance": detectif.last_balance()}
 
+
+# ---------- A3: enrollment ----------
+
+SPEAKER_ID = re.compile(r"^[A-Za-z0-9_.:-]{1,64}$")   # DetectifAI's allowed speaker_id format
+
+
+def slug(text: str) -> str:
+    """'Balaji Keerthi' -> 'balaji-keerthi' (used for customer speaker ids)."""
+    return re.sub(r"[^a-z0-9]+", "-", (text or "").lower()).strip("-")
+
+
+@app.post("/api/people/enroll")
+async def enroll_person(
+    file: UploadFile = File(...),
+    person_id: str = Form(...),
+    display_name: str = Form(...),
+    role: Literal["customer", "agent"] = Form(...),
+    phone: Optional[str] = Form(None),
+    employee_id: Optional[str] = Form(None),
+    department: Optional[str] = Form(None),
+):
+    """Enroll one 15–60 s voice sample. Speaker ids: customers cust-<slug>, agents emp-<employee_id> (PLAN §3).
+    Calling again for the same person adds a sample (DetectifAI max 5; we use 1–2 to save credits)."""
+    if role == "agent":
+        if not employee_id:
+            raise HTTPException(400, "employee_id is required for an agent")
+        speaker_id = f"emp-{employee_id.strip()}"
+    else:
+        speaker_id = f"cust-{slug(person_id)}"
+    if not SPEAKER_ID.match(speaker_id):
+        raise HTTPException(400, f"invalid speaker id {speaker_id!r}: use letters, digits, _ . : -")
+
+    audio = await file.read()
+    if not audio:
+        raise HTTPException(400, "empty file")
+
+    result = await detectif.enroll(speaker_id, display_name, audio, file.filename)
+    if result["error"]:
+        # Pass DetectifAI's real error through (e.g. 409 too_many_samples, 422 not enough speech).
+        status = result["status_code"] if 400 <= result["status_code"] < 600 else 502
+        raise HTTPException(status, result["error"])
+
+    body = result["body"]
+    samples = (body.get("speaker") or {}).get("samples")              # real count from DetectifAI
+    speech_seconds = (body.get("quality") or {}).get("speech_seconds")
+
+    db.conn.execute(
+        """INSERT INTO people (person_id, speaker_id, display_name, role, phone, employee_id, department,
+                               samples, speech_seconds, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT(person_id) DO UPDATE SET
+               speaker_id = excluded.speaker_id, display_name = excluded.display_name, role = excluded.role,
+               phone = excluded.phone, employee_id = excluded.employee_id, department = excluded.department,
+               samples = excluded.samples, speech_seconds = excluded.speech_seconds""",
+        (person_id, speaker_id, display_name, role, phone, employee_id, department,
+         samples, speech_seconds, db.now()),
+    )
+    # Evidence row for the enrollment too (operation id, quality, credits, raw response).
+    db.conn.execute(
+        "INSERT INTO evidence (call_id, kind, clip_sha256, data_json, created_at) VALUES (?, ?, ?, ?, ?)",
+        (None, "enroll", hashlib.sha256(audio).hexdigest(),
+         json.dumps({"time": db.now(), "speaker_id": speaker_id, "operation_id": body.get("operation_id"),
+                     "latency_ms": result["latency_ms"], "credits_balance": detectif.last_balance(), "raw": body}),
+         db.now()),
+    )
+    db.conn.commit()
+    return {"person_id": person_id, "speaker_id": speaker_id, "samples": samples, "speech_seconds": speech_seconds}
+
+
+@app.get("/api/people")
+async def list_people():
+    """Everyone enrolled through SatyaCall (phone only for customers, employee fields only for agents)."""
+    rows = db.conn.execute("SELECT * FROM people ORDER BY created_at").fetchall()
+    people = []
+    for r in rows:
+        p = {"person_id": r["person_id"], "speaker_id": r["speaker_id"], "display_name": r["display_name"],
+             "role": r["role"], "samples": r["samples"]}
+        if r["role"] == "customer":
+            p["phone"] = r["phone"]
+        else:
+            p["employee_id"], p["department"] = r["employee_id"], r["department"]
+        people.append(p)
+    return people
+
+
+# ---------- calls ----------
 
 class NewCall(BaseModel):
     direction: Literal["inbound", "outbound"]

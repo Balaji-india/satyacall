@@ -222,7 +222,12 @@ async def verify_with_deepfake(speaker_id: str, file_bytes: bytes, filename: str
 
 
 async def enroll(speaker_id: str, display_name: str, file_bytes: bytes, filename: str) -> dict:
-    """Eidos enroll (200 credits). Returns the raw result; A3 maps it to the contract."""
+    """Eidos enroll (200 credits). Returns the raw result; A3 maps it to the contract.
+    Like verify, refused below CREDIT_FLOOR so we never spend the demo budget (v3 rule 7)."""
+    balance = last_balance()
+    if balance is not None and balance < config.CREDIT_FLOOR:
+        return {"status_code": 402, "body": {}, "latency_ms": 0,
+                "error": {"code": "credit_floor", "message": "credit floor reached"}}
     path = "/v1/speakers/enroll"
     status, body, latency = await _send(
         "POST", path, idem=_idempotency_key(path, file_bytes, speaker_id),
