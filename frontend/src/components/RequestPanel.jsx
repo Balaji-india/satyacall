@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { errorText, requestAction, sayItBack } from '../api'
 import { authenticityText, speakerText } from '../checkText'
 import { CLIP_SECONDS, recordClip } from '../clipRecorder'
+import { toWav16kMono } from '../toWav'
 
 const ACTIONS = [
   ['balance', 'Balance enquiry'], ['card_status', 'Card status'], ['statement', 'Statement'],
@@ -73,7 +74,9 @@ export default function RequestPanel({ m, remoteStream }) {
         const blob = await recordClip(remoteStream, CLIP_SECONDS,
           (secondsLeft) => setRec((r) => r && { ...r, secondsLeft }))
         setRec((r) => r && { ...r, phase: 'checking' })
-        return sayItBack(m.callId, blob, attempt)
+        // Say-It-Back only: send 16 kHz mono 16-bit WAV (timeline clips stay webm).
+        const wav = await toWav16kMono(blob)
+        return sayItBack(m.callId, wav, attempt)
       })
       m.addSayItBack(res)
     } catch (err) {

@@ -45,37 +45,44 @@ function postAudio(path, blob, fields = {}, filename = 'clip.webm') {
   return request(path, { method: 'POST', body: form })
 }
 
-// Error → one line for the UI: "HTTP 409: call has ended…" or "cannot reach the backend…".
-// The message is the backend's own text (FastAPI puts it in body.detail).
+// Error → one line for the UI, never raw JSON:
+//   backend error  {detail:{code,message}} → "HTTP 422: not enough speech in the clip (insufficient_speech)"
+//   no response                            → "cannot reach the backend…"
 export function errorText(err) {
   if (!err?.status) return err?.message ?? String(err)
   const body = err.body
-  const msg = typeof body === 'string' ? body : body?.detail ?? body?.message ?? body?.error ?? body
-  const text = detailText(msg)
+  // Current backend shape is body.detail; body.error / a bare {code,message} body are read too.
+  const d = typeof body === 'string' ? body : body?.detail ?? body?.error ?? body
+  const text = detailText(d)
   // e.g. an HTML error page from a proxy: keep the line short.
   return `HTTP ${err.status}: ${text.length > 300 ? `${text.slice(0, 300)}…` : text}`
 }
 
-// body.detail can be a string, { code, message } (DetectifAI error passed through by the
-// backend) or FastAPI's validation list [{ loc, msg }]. Always return readable text.
+// d can be a string, { code, message } (our backend's error shape, also used for DetectifAI
+// errors it passes through) or FastAPI's validation list [{ loc, msg }]. Always readable text.
 function detailText(d) {
-  if (d == null || d === '') return 'no details from the backend'
-  if (typeof d === 'string') return d
-  if (Array.isArray(d)) return d.map((x) => (x?.msg ? `${x.loc?.at(-1) ?? ''} ${x.msg}`.trim() : JSON.stringify(x))).join('; ')
-  if (d && typeof d === 'object') return d.message ? `${d.message}${d.code ? ` (${d.code})` : ''}` : d.code ?? JSON.stringify(d)
-  return String(d)
+  if (Array.isArray(d)) return d.map((x) => (x?.msg ? `${x.loc?.at(-1) ?? ''} ${x.msg}`.trim() : codeMessage(x))).join('; ')
+  return codeMessage(d)
+}
+
+// { code, message } → "message (code)"; just one of them if the other is missing.
+// Any other shape → a fixed sentence (we don't dump JSON into the UI).
+function codeMessage(e) {
+  if (e == null || e === '') return 'no details from the backend'
+  if (typeof e === 'string') return e
+  if (typeof e !== 'object') return String(e)
+  const message = typeof e.message === 'string' ? e.message : ''
+  const code = typeof e.code === 'string' || typeof e.code === 'number' ? String(e.code) : ''
+  if (message && code) return `${message} (${code})`
+  return message || code || 'the backend sent an error without a message'
 }
 
 // Stable error code from the backend / DetectifAI, e.g. "insufficient_speech", or null.
-export const errorCode = (err) => err?.body?.detail?.code ?? err?.body?.error?.code ?? null
+export const errorCode = (err) => err?.body?.detail?.code ?? err?.body?.error?.code ?? err?.body?.code ?? null
 
 // A check's `error` field ({ code, message } from the backend, or a plain string) → one line.
-// Never render the object itself (that shows "[object Object]").
-export function checkErrorText(error) {
-  if (!error) return 'no message from the backend'
-  if (typeof error === 'string') return error
-  return error.message || error.code || JSON.stringify(error)
-}
+// Never render the object itself (that shows "[object Object]") or raw JSON.
+export const checkErrorText = (error) => codeMessage(error)
 
 // True when the backend said "not enough speech in this clip" (free, not an error).
 export const isInsufficientSpeech = (err) => err?.status === 422
@@ -116,10 +123,11 @@ export const sendClip = (callId, blob, t_start, t_end) =>
 export const requestAction = (callId, { action_type, params = {} }) =>
   postJson(`/api/calls/${callId}/action`, { action_type, params })
 
-// POST /api/calls/{id}/say-it-back — customer repeats the sentence; attempt 1 or 2
+// POST /api/calls/{id}/say-it-back — customer repeats the sentence; attempt 1 or 2.
+// wavBlob = 16 kHz mono 16-bit WAV (made by toWav.js), sent as "say-it-back.wav".
 // → { pass, transcript, expected, text_match, authenticity, speaker, next_step }
-export const sayItBack = (callId, blob, attempt) =>
-  postAudio(`/api/calls/${callId}/say-it-back`, blob, { attempt })
+export const sayItBack = (callId, wavBlob, attempt) =>
+  postAudio(`/api/calls/${callId}/say-it-back`, wavBlob, { attempt }, 'say-it-back.wav')
 
 // GET /api/calls/{id} → { call, clips, actions, say_it_back, state }
 export const getCall = (callId) => request(`/api/calls/${callId}`)
