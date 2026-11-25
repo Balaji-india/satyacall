@@ -1,9 +1,9 @@
-// /call — the customer's phone. Goes online as "customer-<id>" (so the agent can call outbound)
-// and can "Call bank" (peer "agent-desk").
+// /call — the customer's phone. Goes online as "satyacall-customer-<id>" (so the agent can call
+// outbound) and can "Call bank" (peer "satyacall-agent-desk").
 import { useState } from 'react'
 import CallPanel from '../components/CallPanel'
 import { usePeerCall } from '../usePeerCall'
-import { AGENT_PEER_ID } from '../peer'
+import { AGENT_PEER_ID, customerPeerId } from '../peer'
 
 export default function CallPage() {
   const call = usePeerCall()
@@ -17,7 +17,7 @@ export default function CallPage() {
 
       {!online && (
         <form className="flex flex-wrap items-center gap-2"
-          onSubmit={(e) => { e.preventDefault(); call.goOnline(`customer-${customerId.trim()}`) }}>
+          onSubmit={(e) => { e.preventDefault(); call.goOnline(customerPeerId(customerId.trim())) }}>
           <label className="text-sm text-slate-600" htmlFor="cid">Your customer id</label>
           <input id="cid" value={customerId} onChange={(e) => setCustomerId(e.target.value)}
             placeholder="e.g. C001" className="rounded border px-2 py-1" />
