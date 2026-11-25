@@ -34,6 +34,9 @@ export default function RequestPanel({ m, remoteStream }) {
   const [action, setAction] = useState(null)   // { label, response } of the current request
   const [sibStart, setSibStart] = useState(0)  // m.sayItBacks index where this request's results start
   const [rec, setRec] = useState(null)         // null | { attempt, secondsLeft, phase: recording|checking }
+  // Agent pressed "Stop — use fallback" after attempt 1 (their decision; no 2nd recording,
+  // so no more DetectifAI credits are spent on this request). Nothing is sent to the backend.
+  const [agentFallback, setAgentFallback] = useState(false)
 
   const live = m.phase === 'live'
   const busy = sending || rec !== null
@@ -46,7 +49,7 @@ export default function RequestPanel({ m, remoteStream }) {
 
   const submit = async (e) => {
     e.preventDefault()
-    setError(''); setAction(null); setSending(true)
+    setError(''); setAction(null); setAgentFallback(false); setSending(true)
     const params = {}
     for (const f of fields) {
       const v = (values[f] ?? '').trim()
@@ -87,14 +90,14 @@ export default function RequestPanel({ m, remoteStream }) {
   }
 
   const decision = action?.response?.decision
-  const fallback = decision === 'fallback' || result?.next_step === 'fallback'
+  const fallback = decision === 'fallback' || result?.next_step === 'fallback' || agentFallback
 
   return (
     <section className="space-y-3 rounded-lg border p-4">
       <h2 className="text-lg font-semibold">Customer request</h2>
 
       <form onSubmit={submit} className="space-y-2 text-sm">
-        <select value={actionType} onChange={(e) => { setActionType(e.target.value); setAction(null) }}
+        <select value={actionType} onChange={(e) => { setActionType(e.target.value); setAction(null); setAgentFallback(false) }}
           className="w-full rounded border bg-white px-2 py-1" disabled={busy}>
           {ACTIONS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
         </select>
@@ -149,11 +152,18 @@ export default function RequestPanel({ m, remoteStream }) {
               Record confirmation ({CLIP_SECONDS} s)
             </button>
           )}
-          {!rec && result?.next_step === 'retry' && (
-            <button onClick={() => confirm(2)} disabled={!live}
-              className="w-full rounded bg-amber-500 px-4 py-2 font-semibold disabled:opacity-40">
-              Try again (attempt 2)
-            </button>
+          {!rec && result?.next_step === 'retry' && !agentFallback && (
+            <div className="flex gap-2">
+              <button onClick={() => confirm(2)} disabled={!live}
+                className="flex-1 rounded bg-amber-500 px-4 py-2 font-semibold disabled:opacity-40">
+                Try again (attempt 2)
+              </button>
+              <button onClick={() => setAgentFallback(true)}
+                title="Skip attempt 2: no new recording, no more credits spent"
+                className="flex-1 rounded bg-red-600 px-4 py-2 font-semibold text-white">
+                Stop — use fallback
+              </button>
+            </div>
           )}
         </div>
       )}
@@ -165,7 +175,8 @@ export default function RequestPanel({ m, remoteStream }) {
         <div className="rounded bg-red-600 p-3 text-white">
           <p className="text-lg font-bold">Do not proceed</p>
           <p className="text-sm">
-            Evidence: {result ? 'Say-It-Back did not pass (details above)' : `backend decision "fallback" for ${action.label}`}
+            Evidence: {agentFallback ? 'Fallback chosen by agent after attempt 1 (Say-It-Back details above)'
+              : result ? 'Say-It-Back did not pass (details above)' : `backend decision "fallback" for ${action.label}`}
             {' '}· call state {m.callState ?? 'none yet'} · identity {m.identity ?? 'none yet'}
           </p>
           <p className="text-sm">Next step: {FALLBACK_TEXT}</p>

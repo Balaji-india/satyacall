@@ -1,4 +1,4 @@
-// /call — the customer's phone (simple view, big buttons). Goes online as
+// Call bank tab of /customer (was /call) — the customer's phone (simple view, big buttons). Goes online as
 // "satyacall-customer-<id>" (so the agent can call outbound) and can "Call bank"
 // (peer "satyacall-agent-desk").
 import { useState } from 'react'
@@ -19,7 +19,7 @@ export default function CallPage() {
     : 'Call bank'
 
   return (
-    <section className="mx-auto max-w-[420px] space-y-5 rounded-2xl border bg-white p-4 sm:p-5">
+    <section className="space-y-5">
       <h1 className="text-2xl font-bold">Call your bank</h1>
 
       {!online && (
@@ -29,7 +29,7 @@ export default function CallPage() {
           <input id="cid" value={customerId} onChange={(e) => setCustomerId(e.target.value)} disabled={connecting}
             placeholder="e.g. C001" className="w-full rounded-lg border px-3 py-3 text-lg" />
           <p className="text-sm text-slate-600">Go online first — then you can call the bank, and the bank can call you.</p>
-          <button disabled={!customerId.trim() || connecting} className={`${BIG} bg-slate-900 text-white`}>
+          <button disabled={!customerId.trim() || connecting} className={`${BIG} bg-stamp text-white`}>
             {connecting ? 'Going online…' : 'Go online'}
           </button>
         </form>

@@ -1,1 +1,32 @@
 @import "tailwindcss";
+
+/* SatyaBank tokens. The idea: a bank passbook — cool paper, blue-black ink, and the violet of
+   a bank's rubber stamp. The stamp is the one bold thing; everything else stays quiet. */
+@theme {
+  --font-sans: "Anek Latin", ui-sans-serif, system-ui, sans-serif;
+  --color-paper: #f3f5f4;  /* page background, cool passbook paper */
+  --color-ink: #1d2240;    /* text + agent desk header, blue-black ink */
+  --color-stamp: #5b3fa0;  /* brand + customer primary buttons, stamp-pad violet */
+  --color-pass: #1e7a46;   /* verified / match */
+  --color-warn: #a86a12;   /* watch */
+  --color-stop: #b3261e;   /* alert / no match / fallback */
+}
+
+/* Verdict stamp (call state badge): double-ruled, slightly crooked, like an ink stamp.
+   It "lands" once each time the state changes (the element is keyed by state). */
+.stamp {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4em;
+  border: 3px double currentColor;
+  border-radius: 4px;
+  transform: rotate(-2deg);
+  animation: stamp-land 220ms ease-out;
+}
+@keyframes stamp-land {
+  from { transform: scale(1.3) rotate(-7deg); opacity: 0; }
+  to   { transform: rotate(-2deg); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stamp { animation: none; }
+}

@@ -1,4 +1,4 @@
-// /app — the customer's bank app (B6): "Verify This Caller".
+// Verify caller tab of /customer (was /app) — the customer's bank app (B6): "Verify This Caller".
 // Someone calls claiming to be from the bank. The customer types the caller's employee ID, puts
 // the call on speakerphone, records 10 s from THIS phone's mic → POST /api/verify-caller.
 // The backend decides (call log + Eidos + Aletheia); we only show its answer and evidence.
@@ -53,8 +53,8 @@ export default function AppPage() {
   const canRecord = customerId.trim() && employeeId && !busy
 
   return (
-    <section className="mx-auto max-w-[420px] space-y-5 rounded-2xl border bg-white p-4 sm:p-5">
-      <h1 className="text-2xl font-bold">Verify This Caller</h1>
+    <section className="space-y-5">
+      <h1 className="text-2xl font-bold">Verify this caller</h1>
 
       <CustomerPicker customers={customers} peopleError={peopleError} value={customerId}
         onChange={change(setCustomerId)} disabled={busy} />
@@ -70,7 +70,7 @@ export default function AppPage() {
       <div className="space-y-2">
         <p className="text-sm text-slate-600">Put the call on speakerphone, then let the caller talk for {RECORD_SECONDS} s.</p>
         <button onClick={start} disabled={!canRecord}
-          className="w-full rounded-xl bg-slate-900 py-4 text-lg font-semibold text-white disabled:opacity-40">
+          className="w-full rounded-xl bg-stamp py-4 text-lg font-semibold text-white disabled:opacity-40">
           {mic.starting ? 'Opening microphone…'
             : mic.recording ? `Recording… ${Math.max(RECORD_SECONDS - mic.elapsed, 0)} s`
             : checking ? 'Checking with your bank…'
@@ -192,7 +192,7 @@ function CallLogCheck({ c }) {
 function SpeakerCheck({ s }) {
   const mark = s?.decision === 'match' ? true : s?.decision === 'no_match' ? false : null
   return <CheckRow name="Voice match" mark={mark}
-    text={s ? speakerText(s, 'Voice check skipped — no call record, so no credits spent') : 'no result from the backend'} />
+    text={s ? speakerText(s, 'Voice check skipped — no call record found') : 'no result from the backend'} />
 }
 
 // authenticity (Aletheia) — real human voice or AI-generated?

@@ -1,5 +1,6 @@
 // TopBar — top of /agent: claimed customer + agent id, Start / End call, call state badge,
-// identity badge, credits (big), Pause monitoring, last-clip download, and the ALERT banner.
+// identity badge, credits (big), Pause monitoring, last-clip download, the ALERT banner and
+// the identity "no match" banner.
 // call = usePeerCall(), m = useMonitoring(), onEnd = ends monitoring AND hangs up.
 import { useEffect, useState } from 'react'
 import { errorText, listPeople } from '../api'
@@ -13,6 +14,7 @@ export default function TopBar({ call, m, onEnd }) {
   // GET /api/people → enrolled customers. null = loading; on error or an empty list → text input.
   const [customers, setCustomers] = useState(null)
   const [peopleError, setPeopleError] = useState('')
+  const [startedCustomerId, setStartedCustomerId] = useState('') // claimed customer of the current call
 
   useEffect(() => {
     listPeople()
@@ -37,12 +39,13 @@ export default function TopBar({ call, m, onEnd }) {
 
   const onStart = (e) => {
     e.preventDefault()
+    setStartedCustomerId(customerId.trim())
     m.start({ direction, claimed_customer_id: customerId.trim(), agent_id: agentId.trim() })
   }
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-slate-50 p-3">
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-white p-3">
         {/* Who the caller claims to be + which agent → POST /api/calls */}
         {(m.phase === 'idle' || m.phase === 'ended' || m.phase === 'starting') && (
           <form onSubmit={onStart} className="flex flex-wrap items-center gap-2 text-sm">
@@ -88,7 +91,7 @@ export default function TopBar({ call, m, onEnd }) {
 
         {/* Credits: last balance the backend reported (DetectifAI's real number). */}
         <div className="ml-auto text-right">
-          <div className="text-xs uppercase text-slate-500">DetectifAI credits</div>
+          <div className="text-sm text-ink/60">DetectifAI credits</div>
           <div className="text-2xl font-bold tabular-nums">{m.credits ?? '—'}</div>
         </div>
       </div>
@@ -123,12 +126,26 @@ export default function TopBar({ call, m, onEnd }) {
       )}
 
       {m.callState === 'alert' && (
-        <div className="rounded bg-red-600 p-3 text-white">
+        <div className="rounded border-l-8 border-white/40 bg-stop p-3 text-white">
           <p className="text-lg font-bold">ALERT: Possible handover / voice change</p>
           {m.stateReason && <p className="text-sm">Evidence: {m.stateReason}</p>}
           <p className="text-sm">
             Next step: every request now needs Say-It-Back. If it fails, do not proceed — use the bank's
             existing OTP to the registered number, or call back on the number on file.
+          </p>
+        </div>
+      )}
+
+      {/* Identity = Eidos said this is NOT the claimed customer's voice. Name comes from
+          GET /api/people; if the list did not load we show the id instead (never a made-up name). */}
+      {m.callId && m.identity === 'no_match' && (
+        <div className="rounded border-l-8 border-white/40 bg-stop p-3 text-white">
+          <p className="text-lg font-bold">
+            Caller's voice does not match {customers?.find((p) => p.person_id === startedCustomerId)?.display_name ?? startedCustomerId}.
+            Do not proceed with high-risk requests.
+          </p>
+          <p className="text-sm">
+            Next step: use the bank's existing OTP to the registered number, or call back on the number on file.
           </p>
         </div>
       )}
