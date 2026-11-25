@@ -7,8 +7,17 @@ const BASE = import.meta.env.VITE_API_URL
 // Shared fetch helper. On non-2xx it throws an Error with:
 //   err.status — HTTP status (422 = "too little speech", free, show as "skipped")
 //   err.body   — parsed JSON body (or raw text) from the backend
+// No status (backend not reached) → err.message is already a readable sentence.
 async function request(path, options = {}) {
-  const res = await fetch(`${BASE}${path}`, options)
+  if (!BASE) throw new Error('VITE_API_URL is not set in frontend/.env — set it, then restart npm run dev.')
+  let res
+  try {
+    res = await fetch(`${BASE}${path}`, options)
+  } catch (cause) {
+    throw new Error(cause?.name === 'AbortError'
+      ? 'the backend did not answer in time'
+      : `cannot reach the backend at ${BASE} — is it running and on the same network?`)
+  }
   const text = await res.text()
   let body = text
   try { body = text ? JSON.parse(text) : null } catch { /* not JSON, keep text */ }
@@ -25,24 +34,55 @@ async function request(path, options = {}) {
 const postJson = (path, data) =>
   request(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
 
-// POST multipart form: audio goes in field "file" as clip.webm, plus extra text fields.
-function postAudio(path, blob, fields = {}) {
+// POST multipart form: audio goes in field "file", plus extra text fields.
+// filename matters: the backend picks the audio type from its extension (.webm, .wav, .m4a, .mp3…).
+function postAudio(path, blob, fields = {}, filename = 'clip.webm') {
   const form = new FormData()
-  form.append('file', blob, 'clip.webm')
+  form.append('file', blob, filename)
   for (const [key, value] of Object.entries(fields)) {
     if (value !== undefined && value !== null) form.append(key, String(value))
   }
   return request(path, { method: 'POST', body: form })
 }
 
-// Error → one line for the UI: "HTTP 409: call has ended…" or "network error — …".
-// The message is the backend's own text (FastAPI puts it in body.detail).
+// Error → one line for the UI, never raw JSON:
+//   backend error  {detail:{code,message}} → "HTTP 422: not enough speech in the clip (insufficient_speech)"
+//   no response                            → "cannot reach the backend…"
 export function errorText(err) {
-  if (!err?.status) return `network error — ${err?.message ?? err}`
+  if (!err?.status) return err?.message ?? String(err)
   const body = err.body
-  const msg = typeof body === 'string' ? body : body?.detail ?? body?.message ?? body?.error ?? body
-  return `HTTP ${err.status}: ${typeof msg === 'string' ? msg : JSON.stringify(msg)}`
+  // Current backend shape is body.detail; body.error / a bare {code,message} body are read too.
+  const d = typeof body === 'string' ? body : body?.detail ?? body?.error ?? body
+  const text = detailText(d)
+  // e.g. an HTML error page from a proxy: keep the line short.
+  return `HTTP ${err.status}: ${text.length > 300 ? `${text.slice(0, 300)}…` : text}`
 }
+
+// d can be a string, { code, message } (our backend's error shape, also used for DetectifAI
+// errors it passes through) or FastAPI's validation list [{ loc, msg }]. Always readable text.
+function detailText(d) {
+  if (Array.isArray(d)) return d.map((x) => (x?.msg ? `${x.loc?.at(-1) ?? ''} ${x.msg}`.trim() : codeMessage(x))).join('; ')
+  return codeMessage(d)
+}
+
+// { code, message } → "message (code)"; just one of them if the other is missing.
+// Any other shape → a fixed sentence (we don't dump JSON into the UI).
+function codeMessage(e) {
+  if (e == null || e === '') return 'no details from the backend'
+  if (typeof e === 'string') return e
+  if (typeof e !== 'object') return String(e)
+  const message = typeof e.message === 'string' ? e.message : ''
+  const code = typeof e.code === 'string' || typeof e.code === 'number' ? String(e.code) : ''
+  if (message && code) return `${message} (${code})`
+  return message || code || 'the backend sent an error without a message'
+}
+
+// Stable error code from the backend / DetectifAI, e.g. "insufficient_speech", or null.
+export const errorCode = (err) => err?.body?.detail?.code ?? err?.body?.error?.code ?? err?.body?.code ?? null
+
+// A check's `error` field ({ code, message } from the backend, or a plain string) → one line.
+// Never render the object itself (that shows "[object Object]") or raw JSON.
+export const checkErrorText = (error) => codeMessage(error)
 
 // True when the backend said "not enough speech in this clip" (free, not an error).
 export const isInsufficientSpeech = (err) => err?.status === 422
@@ -58,7 +98,9 @@ export function getHealth() {
 
 // POST /api/people/enroll — formFields: { person_id, display_name, role, phone? | employee_id?, department? }
 // → { person_id, speaker_id, samples, speech_seconds }
-export const enrollPerson = (formFields, fileBlob) => postAudio('/api/people/enroll', fileBlob, formFields)
+// filename: e.g. "sample.wav" for a chosen file (default: our own webm recording)
+export const enrollPerson = (formFields, fileBlob, filename = 'enroll.webm') =>
+  postAudio('/api/people/enroll', fileBlob, formFields, filename)
 
 // GET /api/people → [ { person_id, speaker_id, display_name, role, ... samples } ]
 export const listPeople = () => request('/api/people')
@@ -81,10 +123,11 @@ export const sendClip = (callId, blob, t_start, t_end) =>
 export const requestAction = (callId, { action_type, params = {} }) =>
   postJson(`/api/calls/${callId}/action`, { action_type, params })
 
-// POST /api/calls/{id}/say-it-back — customer repeats the sentence; attempt 1 or 2
+// POST /api/calls/{id}/say-it-back — customer repeats the sentence; attempt 1 or 2.
+// wavBlob = 16 kHz mono 16-bit WAV (made by toWav.js), sent as "say-it-back.wav".
 // → { pass, transcript, expected, text_match, authenticity, speaker, next_step }
-export const sayItBack = (callId, blob, attempt) =>
-  postAudio(`/api/calls/${callId}/say-it-back`, blob, { attempt })
+export const sayItBack = (callId, wavBlob, attempt) =>
+  postAudio(`/api/calls/${callId}/say-it-back`, wavBlob, { attempt }, 'say-it-back.wav')
 
 // GET /api/calls/{id} → { call, clips, actions, say_it_back, state }
 export const getCall = (callId) => request(`/api/calls/${callId}`)

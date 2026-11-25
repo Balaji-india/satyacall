@@ -7,8 +7,18 @@ const WS_BASE = import.meta.env.VITE_WS_URL
 // Opens ws://<backend>/ws/calls/{callId}; calls onMessage({ type, data }) for every message.
 // Optional onStatus("open" | "closed" | "error") so the UI can show whether live updates work.
 // Returns close() — call it when the call ends or the page unmounts.
+// If the socket can't even be created (VITE_WS_URL missing or invalid) monitoring still works:
+// clip results also come back in each HTTP response.
 export function connectCallWS(callId, onMessage, onStatus = () => {}) {
-  const socket = new WebSocket(`${WS_BASE}/ws/calls/${callId}`)
+  let socket
+  try {
+    if (!WS_BASE) throw new Error('VITE_WS_URL is not set in frontend/.env')
+    socket = new WebSocket(`${WS_BASE}/ws/calls/${callId}`)
+  } catch (err) {
+    console.error('[ws] could not connect', err)
+    onStatus('error')
+    return () => {}
+  }
   socket.onopen = () => onStatus('open')
 
   socket.onmessage = (event) => {

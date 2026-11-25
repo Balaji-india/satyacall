@@ -1,5 +1,6 @@
-// ClipList — one row per 10 s clip (simple list; the Recharts timeline comes in B4).
+// ClipList — one row per 10 s clip (text view under the trust timeline).
 // Everything shown is copied from the backend's ClipResult or error — nothing is invented.
+import { checkErrorText } from '../api'
 
 const STATUS_DOT = { green: 'bg-green-500', amber: 'bg-amber-400', red: 'bg-red-600', skipped: 'bg-slate-400' }
 
@@ -35,9 +36,9 @@ function ResultRow({ row }) {
       <span className={`inline-block h-3 w-3 rounded-full ${STATUS_DOT[r.status] ?? 'bg-slate-300'}`} title={`status: ${r.status}`} />
       <span className="w-24 font-mono">{time(row)}</span>
       {r.status === 'skipped' ? (
-        <span className="text-slate-600">skipped (too little speech){a.error ? ` — ${a.error}` : ''}</span>
+        <span className="text-slate-600">skipped (too little speech){a.error ? ` — ${checkErrorText(a.error)}` : ''}</span>
       ) : a.verdict === 'error' ? (
-        <span className="text-amber-700">check unavailable — {a.error ?? 'no message from the backend'}</span>
+        <span className="text-amber-700">check unavailable — {checkErrorText(a.error)}</span>
       ) : (
         <>
           <span className="font-medium">{a.verdict}</span>
