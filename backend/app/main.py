@@ -12,12 +12,25 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from . import config, db, decision, detectif
+from . import config, db, decision, detectif, stt
+
+
+def preload_stt() -> None:
+    """Load Whisper in the background at startup. If it is missing or still downloading, say so in
+    one line; Say-It-Back tries again on first use (and answers 503 until the model is ready)."""
+    try:
+        stt.load_model()
+        print("INFO:     Say-It-Back speech-to-text model loaded")
+    except Exception as e:
+        print(f"WARNING:  Say-It-Back model not ready yet ({type(e).__name__}: {e})")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     db.init()  # create SQLite tables on startup
+    # Load the Whisper model in the background so the server starts immediately.
+    if config.STT_PRELOAD:
+        asyncio.get_running_loop().run_in_executor(None, preload_stt)
     yield
 
 
@@ -353,3 +366,88 @@ async def request_action(call_id: str, body: NewAction):
     if sentence:
         response["sentence"] = sentence
     return response
+
+
+# ---------- A6: Say-It-Back ----------
+
+@app.post("/api/calls/{call_id}/say-it-back")
+async def say_it_back(call_id: str, file: UploadFile = File(...), attempt: int = Form(...)):
+    """Customer repeats the sentence (WAV, ~10 s). PASS = words match AND Eidos 'match' AND Aletheia 'real'.
+    -> { pass, transcript, expected, text_match, authenticity, speaker, next_step: approved|retry|fallback }"""
+    call = get_call(call_id)
+    if call["ended_at"]:
+        raise HTTPException(409, "call has ended")
+    if attempt not in (1, 2):
+        raise HTTPException(400, "attempt must be 1 or 2 (v3: max 2 Say-It-Back attempts)")
+
+    # The sentence to check = the latest action on this call that asked for Say-It-Back.
+    action = db.conn.execute(
+        "SELECT sentence, created_at FROM actions WHERE call_id = ? AND decision = 'say_it_back' "
+        "ORDER BY id DESC LIMIT 1", (call_id,)).fetchone()
+    if not action:
+        raise HTTPException(409, "no Say-It-Back was requested on this call (POST /action first)")
+    previous = db.conn.execute(
+        "SELECT pass FROM say_it_back WHERE call_id = ? AND created_at >= ? ORDER BY id",
+        (call_id, action["created_at"])).fetchall()
+    if any(r["pass"] for r in previous):
+        raise HTTPException(409, "this request was already approved")
+    if len(previous) >= 2:
+        raise HTTPException(409, "both attempts used: fallback to OTP / call-back")
+    if attempt != len(previous) + 1:
+        raise HTTPException(409, f"expected attempt {len(previous) + 1}")
+
+    audio = await file.read()
+    try:
+        samples = stt.wav_to_samples(audio)          # WAV only (see stt.py for why)
+    except stt.NotWav as e:
+        raise HTTPException(415, str(e))
+    if not stt.model_ready():
+        try:
+            await asyncio.to_thread(stt.load_model)  # waits if the startup preload is still running
+        except Exception as e:                       # missing or half-downloaded model file
+            raise HTTPException(503, f"speech-to-text unavailable: {type(e).__name__}: {e}")
+
+    expected = action["sentence"]
+    clip_sha256 = hashlib.sha256(audio).hexdigest()
+
+    # 1) Words first (free, local). 2) Eidos + Aletheia (~520 credits) ONLY if the words match:
+    #    a wrong sentence fails anyway, so we don't spend credits on it (v3 credit rules).
+    transcript = await asyncio.to_thread(stt.transcribe, samples)
+    score, coverage = stt.text_match(expected, transcript)
+    numbers_ok = stt.numbers_match(expected, transcript)
+    words_ok = stt.text_passes(score, coverage, numbers_ok)
+
+    if words_ok:
+        outcome = await detectif.verify_with_deepfake(
+            customer_speaker_id(call["claimed_customer_id"]), audio, file.filename or "say_it_back.wav")
+    else:
+        not_run = {"code": "not_checked", "message": "voice not checked: the words did not match (saves ~520 credits)"}
+        outcome = {"check": {"authenticity": {"verdict": "error", "score": None, "threshold": None, "segments": [],
+                                              "operation_id": None, "error": not_run},
+                             "speaker": detectif.speaker_not_checked(), "raw": {}},
+                   "skipped": False, "status_code": 0, "latency_ms": 0, "credits_balance": detectif.last_balance()}
+    check = outcome["check"]
+
+    passed = words_ok and check["speaker"]["decision"] == "match" and check["authenticity"]["verdict"] == "real"
+    next_step = "approved" if passed else ("retry" if attempt == 1 else "fallback")
+
+    result = {"pass": passed, "transcript": transcript, "expected": expected, "text_match": score,
+              "authenticity": check["authenticity"], "speaker": check["speaker"], "next_step": next_step}
+
+    # Call state + identity badge: a passed Say-It-Back is the only way out of ALERT (PLAN §3).
+    identity = decision.identity_from(check, call["identity"])
+    new_state = "verified" if passed and call["state"] == "alert" else call["state"]
+    db.conn.execute("UPDATE calls SET state = ?, identity = ? WHERE call_id = ?", (new_state, identity, call_id))
+    db.conn.execute(
+        "INSERT INTO say_it_back (call_id, attempt, pass, transcript, expected, text_match, result_json, created_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (call_id, attempt, int(passed), transcript, expected, score,
+         json.dumps({**result, "coverage": coverage, "numbers_match": numbers_ok, "raw": check["raw"]}), db.now()))
+    db.conn.commit()
+    save_evidence(call_id, "say_it_back", clip_sha256, outcome, next_step)
+
+    await hub.send(call_id, {"type": "say_it_back_result", "data": result})
+    if new_state != call["state"]:
+        await hub.send(call_id, {"type": "state_change", "data": {
+            "from": call["state"], "to": new_state, "reason": "Say-It-Back passed: words, voice and authenticity"}})
+    return result

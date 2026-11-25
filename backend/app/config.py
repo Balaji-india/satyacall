@@ -21,5 +21,8 @@ DEV_REPLAY = _bool("DEV_REPLAY", False)                # reuse Idempotency-Key p
 EIDOS_ON_FIRST_CLIP = _bool("EIDOS_ON_FIRST_CLIP", False)
 CREDIT_FLOOR = int(os.getenv("CREDIT_FLOOR", "600"))
 
+# Load the Whisper model at startup (tests turn this off).
+STT_PRELOAD = _bool("STT_PRELOAD", True)
+
 CLIP_SECONDS = float(os.getenv("CLIP_SECONDS", "10"))
 DB_PATH = os.getenv("DB_PATH", str(BACKEND_DIR / "satyacall.db"))
