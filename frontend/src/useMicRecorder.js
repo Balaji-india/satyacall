@@ -8,6 +8,7 @@ import { micErrorText } from './peer'
 const MIME = 'audio/webm;codecs=opus'
 
 export function useMicRecorder(maxSeconds, onDone, audio = true) {
+  const [starting, setStarting] = useState(false) // waiting for mic permission → disable the button
   const [recording, setRecording] = useState(false)
   const [elapsed, setElapsed] = useState(0)  // whole seconds recorded so far (for the countdown)
   const [error, setError] = useState('')
@@ -30,24 +31,35 @@ export function useMicRecorder(maxSeconds, onDone, audio = true) {
     if (typeof MediaRecorder === 'undefined' || !MediaRecorder.isTypeSupported(MIME)) {
       return setError(`This browser can't record ${MIME}. Use Chrome or Edge.`)
     }
+    setStarting(true)
     let stream
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio })
     } catch (err) {
+      setStarting(false)
       return setError(micErrorText(err))
     }
+    setStarting(false)
+    const releaseMic = () => stream.getTracks().forEach((t) => t.stop()) // mic light off
+    if (discardRef.current) return releaseMic() // page left while the permission prompt was open
 
-    const recorder = new MediaRecorder(stream, { mimeType: MIME })
+    let recorder
+    try {
+      recorder = new MediaRecorder(stream, { mimeType: MIME })
+    } catch (err) {
+      releaseMic()
+      return setError(`Could not start recording: ${err.message ?? err}`)
+    }
     const parts = []
-    const t0 = performance.now()
-    const ticker = setInterval(() => setElapsed(Math.floor((performance.now() - t0) / 1000)), 250)
-    const timer = setTimeout(() => recorder.state === 'recording' && recorder.stop(), maxSeconds * 1000)
+    let t0 = 0
+    let ticker = null
+    let timer = null
 
     recorder.ondataavailable = (e) => { if (e.data.size > 0) parts.push(e.data) }
     recorder.onstop = () => {
       clearInterval(ticker)
       clearTimeout(timer)
-      stream.getTracks().forEach((t) => t.stop()) // mic light off
+      releaseMic()
       recorderRef.current = null
       setRecording(false)
       if (discardRef.current) return
@@ -57,14 +69,22 @@ export function useMicRecorder(maxSeconds, onDone, audio = true) {
     }
     recorder.onerror = (e) => setError(`Recorder error: ${e.error?.message ?? e.error ?? 'unknown'}`)
 
+    try {
+      recorder.start() // no timeslice → one complete file
+    } catch (err) {
+      releaseMic()
+      return setError(`Could not start recording: ${err.message ?? err}`)
+    }
+    t0 = performance.now()
+    ticker = setInterval(() => setElapsed(Math.floor((performance.now() - t0) / 1000)), 250)
+    timer = setTimeout(() => recorder.state === 'recording' && recorder.stop(), maxSeconds * 1000)
     recorderRef.current = recorder
     setElapsed(0)
     setRecording(true)
-    recorder.start() // no timeslice → one complete file
   }
 
   // "Stop" — ends early; the recording so far is kept (the page warns if it's too short).
   const stop = () => { if (recorderRef.current?.state === 'recording') recorderRef.current.stop() }
 
-  return { recording, elapsed, error, start, stop }
+  return { starting, recording, elapsed, error, start, stop }
 }

@@ -11,16 +11,19 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <Header />
-      <main className="mx-auto max-w-6xl p-4">
+      <main className="mx-auto max-w-6xl px-3 py-4 sm:p-4">
         <Routes>
           <Route path="/" element={<Navigate to="/agent" replace />} />
           <Route path="/call" element={<CallPage />} />
           <Route path="/agent" element={<AgentPage />} />
           <Route path="/app" element={<AppPage />} />
           <Route path="/enroll" element={<EnrollPage />} />
-          <Route path="*" element={<Placeholder title="Page not found" task="—" description="Use the nav bar above." />} />
+          <Route path="*" element={<Placeholder title="Page not found" description="This page does not exist — use the nav bar above." />} />
         </Routes>
       </main>
+      <footer className="mx-auto max-w-6xl px-4 pb-6 text-center text-xs text-slate-500">
+        Signals, not proof — a person reviews decisions that matter.
+      </footer>
     </div>
   )
 }

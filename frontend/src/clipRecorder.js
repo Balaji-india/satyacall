@@ -103,6 +103,12 @@ export function recordClip(stream, seconds, onTick = () => {}) {
     recorder.onerror = (e) => reject(new Error(`Recorder error: ${e.error?.message ?? e.error ?? 'unknown'}`))
 
     onTick(left)
-    recorder.start() // no timeslice → one complete .webm file
+    try {
+      recorder.start() // no timeslice → one complete .webm file
+    } catch (err) {
+      clearInterval(ticker)
+      clearTimeout(timer)
+      reject(new Error(`Could not start recording: ${err.message ?? err}`))
+    }
   })
 }

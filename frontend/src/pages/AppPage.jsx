@@ -49,11 +49,11 @@ export default function AppPage() {
   // Changing who / which ID makes an old answer wrong → clear it.
   const change = (setter) => (value) => { setter(value); setResult(null); setError('') }
 
-  const busy = mic.recording || checking
+  const busy = mic.starting || mic.recording || checking
   const canRecord = customerId.trim() && employeeId && !busy
 
   return (
-    <section className="mx-auto max-w-[420px] space-y-5 rounded-2xl border bg-white p-5">
+    <section className="mx-auto max-w-[420px] space-y-5 rounded-2xl border bg-white p-4 sm:p-5">
       <h1 className="text-2xl font-bold">Verify This Caller</h1>
 
       <CustomerPicker customers={customers} peopleError={peopleError} value={customerId}
@@ -71,17 +71,18 @@ export default function AppPage() {
         <p className="text-sm text-slate-600">Put the call on speakerphone, then let the caller talk for {RECORD_SECONDS} s.</p>
         <button onClick={start} disabled={!canRecord}
           className="w-full rounded-xl bg-slate-900 py-4 text-lg font-semibold text-white disabled:opacity-40">
-          {mic.recording ? `Recording… ${Math.max(RECORD_SECONDS - mic.elapsed, 0)} s`
+          {mic.starting ? 'Opening microphone…'
+            : mic.recording ? `Recording… ${Math.max(RECORD_SECONDS - mic.elapsed, 0)} s`
             : checking ? 'Checking with your bank…'
             : `Record caller (${RECORD_SECONDS} s)`}
         </button>
-        {mic.error && <p className="rounded bg-red-50 p-2 text-sm text-red-700">{mic.error}</p>}
+        {mic.error && <p className="break-words rounded bg-red-50 p-2 text-sm text-red-700">{mic.error}</p>}
       </div>
 
       {error && (
         <div className="space-y-2 rounded-xl bg-red-50 p-3 text-red-800">
           <p className="font-semibold">Could not check this caller</p>
-          <p className="text-sm">{error}</p>
+          <p className="break-words text-sm">{error}</p>
           <p className="text-sm">Until it is checked, treat the caller as unconfirmed.</p>
           <OfficialNumber />
         </div>
@@ -126,7 +127,7 @@ function Result({ result }) {
     <div className="space-y-4">
       {verified ? (
         <div className="rounded-xl bg-green-600 p-4 text-white">
-          <p className="text-2xl font-bold">
+          <p className="break-words text-2xl font-bold">
             Verified: {employee?.name ?? 'unknown name'}, {employee?.department ?? 'unknown department'}
           </p>
           <p className="mt-1">You can continue the call.</p>
@@ -172,9 +173,9 @@ function CheckRow({ name, mark, text }) {
   return (
     <li className="flex gap-3 p-3">
       <span className={`text-xl font-bold ${color}`}>{icon}</span>
-      <div>
+      <div className="min-w-0">
         <p className="font-semibold">{name}</p>
-        <p className="text-sm text-slate-600">{text}</p>
+        <p className="break-words text-sm text-slate-600">{text}</p>
       </div>
     </li>
   )

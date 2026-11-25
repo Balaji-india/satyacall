@@ -32,7 +32,7 @@ export default function EvidenceDrawer({ m }) {
 
       {open && (
         <ul className="divide-y border-t text-sm">
-          {checks.length === 0 && <li className="p-3 text-slate-500">No checks yet.</li>}
+          {checks.length === 0 && <li className="p-3 text-slate-500">No checks yet — each 10 s clip result and each Say-It-Back attempt appears here.</li>}
           {checks.map((c) => (
             <li key={c.key} className="space-y-2 p-3">
               <p className="font-medium">{c.title}</p>

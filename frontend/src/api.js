@@ -7,8 +7,17 @@ const BASE = import.meta.env.VITE_API_URL
 // Shared fetch helper. On non-2xx it throws an Error with:
 //   err.status — HTTP status (422 = "too little speech", free, show as "skipped")
 //   err.body   — parsed JSON body (or raw text) from the backend
+// No status (backend not reached) → err.message is already a readable sentence.
 async function request(path, options = {}) {
-  const res = await fetch(`${BASE}${path}`, options)
+  if (!BASE) throw new Error('VITE_API_URL is not set in frontend/.env — set it, then restart npm run dev.')
+  let res
+  try {
+    res = await fetch(`${BASE}${path}`, options)
+  } catch (cause) {
+    throw new Error(cause?.name === 'AbortError'
+      ? 'the backend did not answer in time'
+      : `cannot reach the backend at ${BASE} — is it running and on the same network?`)
+  }
   const text = await res.text()
   let body = text
   try { body = text ? JSON.parse(text) : null } catch { /* not JSON, keep text */ }
@@ -36,18 +45,21 @@ function postAudio(path, blob, fields = {}, filename = 'clip.webm') {
   return request(path, { method: 'POST', body: form })
 }
 
-// Error → one line for the UI: "HTTP 409: call has ended…" or "network error — …".
+// Error → one line for the UI: "HTTP 409: call has ended…" or "cannot reach the backend…".
 // The message is the backend's own text (FastAPI puts it in body.detail).
 export function errorText(err) {
-  if (!err?.status) return `network error — ${err?.message ?? err}`
+  if (!err?.status) return err?.message ?? String(err)
   const body = err.body
   const msg = typeof body === 'string' ? body : body?.detail ?? body?.message ?? body?.error ?? body
-  return `HTTP ${err.status}: ${detailText(msg)}`
+  const text = detailText(msg)
+  // e.g. an HTML error page from a proxy: keep the line short.
+  return `HTTP ${err.status}: ${text.length > 300 ? `${text.slice(0, 300)}…` : text}`
 }
 
 // body.detail can be a string, { code, message } (DetectifAI error passed through by the
 // backend) or FastAPI's validation list [{ loc, msg }]. Always return readable text.
 function detailText(d) {
+  if (d == null || d === '') return 'no details from the backend'
   if (typeof d === 'string') return d
   if (Array.isArray(d)) return d.map((x) => (x?.msg ? `${x.loc?.at(-1) ?? ''} ${x.msg}`.trim() : JSON.stringify(x))).join('; ')
   if (d && typeof d === 'object') return d.message ? `${d.message}${d.code ? ` (${d.code})` : ''}` : d.code ?? JSON.stringify(d)

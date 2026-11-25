@@ -49,7 +49,7 @@ export default function TopBar({ call, m, onEnd }) {
             <label htmlFor="claimed" className="text-slate-600">Claimed customer</label>
             {useSelect ? (
               <select id="claimed" value={customerId} onChange={(e) => setCustomerId(e.target.value)}
-                className="rounded border bg-white px-2 py-1">
+                disabled={m.phase === 'starting'} className="rounded border bg-white px-2 py-1">
                 <option value="">choose…</option>
                 {customers.map((p) => (
                   <option key={p.person_id} value={p.person_id}>{p.display_name} ({p.person_id})</option>
@@ -57,7 +57,7 @@ export default function TopBar({ call, m, onEnd }) {
               </select>
             ) : (
               <input id="claimed" value={customerId} onChange={(e) => setCustomerId(e.target.value)}
-                placeholder="cust-balaji" className="rounded border px-2 py-1"
+                disabled={m.phase === 'starting'} placeholder="cust-balaji" className="rounded border px-2 py-1"
                 title={customers === null ? 'Loading customers…' : peopleError
                   ? `Could not load customers (${peopleError}) — type the id` : 'No enrolled customers — type the id'} />
             )}
@@ -65,7 +65,7 @@ export default function TopBar({ call, m, onEnd }) {
                 employee ID, so use the bare number (e.g. 4521), not the speaker id emp-4521. */}
             <label htmlFor="agent" className="text-slate-600">Employee ID</label>
             <input id="agent" value={agentId} onChange={(e) => setAgentId(e.target.value)}
-              placeholder="4521" className="w-28 rounded border px-2 py-1" />
+              disabled={m.phase === 'starting'} placeholder="4521" className="w-28 rounded border px-2 py-1" />
             <button disabled={!canStart || !customerId.trim() || !agentId.trim()}
               className="rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-40">
               {m.phase === 'starting' ? 'Starting…' : 'Start monitoring'}
@@ -117,7 +117,7 @@ export default function TopBar({ call, m, onEnd }) {
               : `recording ${CLIP_SECONDS} s clips of the customer`)}
             {m.phase === 'ending' && 'ending — finishing queued uploads…'}
             {m.phase === 'ended' && 'call ended'}
-            {' · '}live updates: {m.wsStatus || 'connecting…'}
+            {' · '}live updates: {wsText(m.wsStatus, live)}
           </span>
         </div>
       )}
@@ -136,6 +136,13 @@ export default function TopBar({ call, m, onEnd }) {
       {m.error && <p className="rounded bg-red-50 p-2 text-sm text-red-700">{m.error}</p>}
     </div>
   )
+}
+
+// WebSocket status → words. Without it, results still arrive in each clip's HTTP response.
+function wsText(status, live) {
+  if (status === 'open') return 'connected'
+  if (!status) return 'connecting…'
+  return live ? 'lost — results still arrive over HTTP' : 'closed'
 }
 
 // Save the Blob as a .webm file (proves the capture is real and complete).

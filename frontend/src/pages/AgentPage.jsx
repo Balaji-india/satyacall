@@ -29,6 +29,11 @@ export default function AgentPage() {
   return (
     <section className="space-y-4 rounded-lg border bg-white p-6">
       <h1 className="text-2xl font-semibold">Agent console</h1>
+      {!m.callId && (
+        <p className="text-sm text-slate-600">
+          Go online to take customer calls (or call one outbound). Once connected, start monitoring to see the trust timeline.
+        </p>
+      )}
 
       <div className="flex flex-wrap items-start gap-6">
         {!online && (
@@ -45,7 +50,8 @@ export default function AgentPage() {
               placeholder="e.g. C001" className="rounded border px-2 py-1" />
             <button disabled={!customerId.trim() || call.status === 'ringing' || call.status === 'in-call'}
               className="rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-40">
-              Call {customerPeerId(customerId.trim() || '…')}
+              {call.status === 'ringing' && call.direction === 'outbound'
+                ? `Calling ${call.otherId}…` : `Call ${customerPeerId(customerId.trim() || '…')}`}
             </button>
           </form>
         )}

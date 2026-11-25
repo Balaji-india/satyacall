@@ -1,7 +1,7 @@
 // Header — app name, nav bar, and the REAL backend status from GET /api/health.
 import { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { getHealth } from '../api'
+import { errorText, getHealth } from '../api'
 
 const LINKS = [
   { to: '/call', label: 'Customer call' },
@@ -26,10 +26,10 @@ export default function Header() {
 
   return (
     <header className="border-b bg-white">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-4 py-3">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-3 py-3 sm:px-4">
         <span className="text-lg font-bold">SatyaCall</span>
 
-        <nav className="flex gap-1">
+        <nav className="flex flex-wrap gap-1">
           {LINKS.map((link) => (
             <NavLink
               key={link.to}
@@ -43,7 +43,7 @@ export default function Header() {
           ))}
         </nav>
 
-        <button onClick={checkHealth} className="ml-auto text-sm" title="Re-check backend">
+        <button onClick={checkHealth} disabled={health === null} className="ml-auto text-left text-sm" title="Click to re-check the backend">
           <HealthText health={health} />
         </button>
       </div>
@@ -54,7 +54,13 @@ export default function Header() {
 // Only shows what the backend actually returned — no default numbers.
 function HealthText({ health }) {
   if (health === null) return <span className="text-slate-500">Backend: checking…</span>
-  if (!health.ok) return <span className="text-red-600">● Backend unreachable</span>
+  if (!health.ok) {
+    return (
+      <span className="text-red-600">
+        ● Backend unreachable <span className="text-xs">— {errorText(health.error)} · click to retry</span>
+      </span>
+    )
+  }
 
   const { credits_balance, detectif_reachable } = health.data
   return (

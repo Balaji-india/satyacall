@@ -13,7 +13,7 @@ export default function PeopleList({ people, error, onRefresh }) {
       </div>
 
       {error && <p className="rounded bg-red-50 p-2 text-sm text-red-700">Could not load the list: {error}</p>}
-      {people?.length === 0 && <p className="text-sm text-slate-500">Nobody enrolled yet.</p>}
+      {people?.length === 0 && <p className="text-sm text-slate-500">Nobody enrolled yet — record a voice sample above to add the first person.</p>}
 
       {people?.length > 0 && (
         <table className="w-full text-left text-sm">

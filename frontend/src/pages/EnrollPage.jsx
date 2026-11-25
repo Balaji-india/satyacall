@@ -98,7 +98,7 @@ export default function EnrollPage() {
     }
   }
 
-  const busy = mic.recording || submitting
+  const busy = mic.starting || mic.recording || submitting
   const input = 'w-full rounded border px-2 py-1'
 
   return (
@@ -145,9 +145,9 @@ export default function EnrollPage() {
           </p>
           <div className="flex flex-wrap items-center gap-2">
             {!mic.recording ? (
-              <button type="button" onClick={mic.start} disabled={submitting}
+              <button type="button" onClick={mic.start} disabled={submitting || mic.starting}
                 className="rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-40">
-                {audio ? 'Record again' : `Record ${RECORD_SECONDS} s`}
+                {mic.starting ? 'Opening microphone…' : audio ? 'Record again' : `Record ${RECORD_SECONDS} s`}
               </button>
             ) : (
               <button type="button" onClick={mic.stop} className="rounded bg-red-600 px-4 py-2 text-white">
