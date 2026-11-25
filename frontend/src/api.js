@@ -44,6 +44,14 @@ export function errorText(err) {
   return `HTTP ${err.status}: ${typeof msg === 'string' ? msg : JSON.stringify(msg)}`
 }
 
+// A check's `error` field ({ code, message } from the backend, or a plain string) → one line.
+// Never render the object itself (that shows "[object Object]").
+export function checkErrorText(error) {
+  if (!error) return 'no message from the backend'
+  if (typeof error === 'string') return error
+  return error.message || error.code || JSON.stringify(error)
+}
+
 // True when the backend said "not enough speech in this clip" (free, not an error).
 export const isInsufficientSpeech = (err) => err?.status === 422
 

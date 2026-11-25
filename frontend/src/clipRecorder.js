@@ -72,3 +72,37 @@ export function startClipRecorder(stream, t0, onClip, onError) {
     },
   }
 }
+
+// Record ONE complete clip of `stream` (Say-It-Back confirmation) with its own new MediaRecorder.
+//   onTick(secondsLeft) — called every second for the countdown
+// Resolves with the Blob after `seconds`; rejects if the recording stops early (call dropped),
+// because a partial clip must never be sent.
+export function recordClip(stream, seconds, onTick = () => {}) {
+  return new Promise((resolve, reject) => {
+    if (typeof MediaRecorder === 'undefined' || !MediaRecorder.isTypeSupported(MIME)) {
+      return reject(new Error(`This browser can't record ${MIME}. Use Chrome or Edge.`))
+    }
+    const recorder = new MediaRecorder(stream, { mimeType: MIME })
+    const parts = []
+    let left = seconds
+    let complete = false // true only when OUR timer ended the recording
+
+    const ticker = setInterval(() => onTick(--left), 1000)
+    const timer = setTimeout(() => {
+      complete = true
+      if (recorder.state !== 'inactive') recorder.stop()
+    }, seconds * 1000)
+
+    recorder.ondataavailable = (e) => { if (e.data.size > 0) parts.push(e.data) }
+    recorder.onstop = () => {
+      clearInterval(ticker)
+      clearTimeout(timer)
+      if (complete) resolve(new Blob(parts, { type: MIME }))
+      else reject(new Error('Recording stopped early (did the call drop?) — nothing was sent.'))
+    }
+    recorder.onerror = (e) => reject(new Error(`Recorder error: ${e.error?.message ?? e.error ?? 'unknown'}`))
+
+    onTick(left)
+    recorder.start() // no timeslice → one complete .webm file
+  })
+}

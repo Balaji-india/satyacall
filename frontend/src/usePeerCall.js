@@ -41,6 +41,7 @@ export function usePeerCall() {
       if (callRef.current !== call) return
       setRemoteStream(stream)
       setStatus('in-call')
+      setError('') // connected → an old error ("other side is offline") is no longer true
     })
     call.on('close', () => dropCall(call))
     call.on('error', (err) => { setError(peerErrorText(err, peerRef.current?.id, call.peer)); dropCall(call) })

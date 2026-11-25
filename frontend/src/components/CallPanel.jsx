@@ -16,7 +16,8 @@ function statusText({ status, myId, otherId, incoming }) {
 const DOT = { offline: 'bg-slate-400', connecting: 'bg-amber-400', online: 'bg-green-500',
   ringing: 'bg-amber-500 animate-pulse', 'in-call': 'bg-green-600', ended: 'bg-slate-500' }
 
-export default function CallPanel({ call }) {
+// onHangUp (optional): what "Hang up" does. /agent passes one that also ends monitoring.
+export default function CallPanel({ call, onHangUp = call.hangUp }) {
   const inCallOrRinging = call.status === 'ringing' || call.status === 'in-call'
   return (
     <div className="space-y-3">
@@ -35,7 +36,7 @@ export default function CallPanel({ call }) {
           className="rounded border px-4 py-2 disabled:opacity-40">
           {call.muted ? 'Unmute' : 'Mute'}
         </button>
-        <button onClick={call.hangUp} disabled={!inCallOrRinging}
+        <button onClick={call.incoming ? call.hangUp : onHangUp} disabled={!inCallOrRinging}
           className="rounded bg-red-600 px-4 py-2 text-white disabled:opacity-40">
           {call.incoming ? 'Decline' : 'Hang up'}
         </button>
