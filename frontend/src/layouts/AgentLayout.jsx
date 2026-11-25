@@ -4,13 +4,13 @@ import Header from '../components/Header'
 
 export default function AgentLayout() {
   return (
-    <div className="min-h-screen bg-paper text-ink">
+    <div className="min-h-screen text-ink">
       <Header />
-      <main className="mx-auto max-w-6xl px-3 py-4 sm:p-4">
+      <main className="mx-auto max-w-6xl px-3 py-5 sm:px-4">
         <Outlet />
       </main>
-      <footer className="mx-auto max-w-6xl px-4 pb-6 text-center text-sm text-ink/60">
-        Signals, not proof. A person reviews decisions that matter.
+      <footer className="mx-auto max-w-6xl px-4 pb-6 text-center text-sm text-slate-500">
+        Signals, not proof — a person reviews decisions that matter.
       </footer>
     </div>
   )

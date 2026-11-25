@@ -102,7 +102,7 @@ export default function EnrollPage() {
   const input = 'w-full rounded border px-2 py-1'
 
   return (
-    <section className="space-y-6 rounded-lg border bg-white p-6">
+    <section className="glass space-y-6 p-6">
       <h1 className="text-2xl font-semibold">Enroll a voice</h1>
 
       <form onSubmit={submit} className="grid gap-4 md:grid-cols-2">
@@ -146,7 +146,7 @@ export default function EnrollPage() {
           <div className="flex flex-wrap items-center gap-2">
             {!mic.recording ? (
               <button type="button" onClick={mic.start} disabled={submitting || mic.starting}
-                className="rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-40">
+                className="btn-primary px-4 py-2 disabled:opacity-40">
                 {mic.starting ? 'Opening microphone…' : audio ? 'Record again' : `Record ${RECORD_SECONDS} s`}
               </button>
             ) : (
@@ -161,7 +161,7 @@ export default function EnrollPage() {
           </div>
 
           {mic.recording && (
-            <p className={`rounded p-2 text-center font-semibold text-white ${mic.elapsed < MIN_SECONDS ? 'bg-amber-600' : 'bg-green-700'}`}>
+            <p className={`rounded p-2 text-center font-semibold text-white ${mic.elapsed < MIN_SECONDS ? 'bg-amber-600' : 'bg-pass'}`}>
               ● Recording… {RECORD_SECONDS - mic.elapsed} s left
               {mic.elapsed < MIN_SECONDS && ` (stopping now gives only ${mic.elapsed} s — under ${MIN_SECONDS} s)`}
             </p>

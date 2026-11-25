@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import { errorText, listPeople, verifyCaller } from '../api'
 import { authenticityText, speakerText } from '../checkText'
 import { useMicRecorder } from '../useMicRecorder'
+import { CheckIcon, StopIcon } from '../components/Icons'
 
 const RECORD_SECONDS = 10
 // Which GET /api/people field is sent as customer_id. person_id = what /agent sends as
@@ -64,13 +65,13 @@ export default function AppPage() {
         <input id="emp" inputMode="numeric" autoComplete="off" value={employeeId} disabled={busy}
           onChange={(e) => change(setEmployeeId)(e.target.value.replace(/\D/g, ''))}
           placeholder="Ask the caller, e.g. 4521"
-          className="w-full rounded-lg border px-3 py-3 text-lg tracking-widest" />
+          className="w-full rounded-xl border px-4 py-3 text-lg tracking-widest" />
       </div>
 
       <div className="space-y-2">
         <p className="text-sm text-slate-600">Put the call on speakerphone, then let the caller talk for {RECORD_SECONDS} s.</p>
         <button onClick={start} disabled={!canRecord}
-          className="w-full rounded-xl bg-stamp py-4 text-lg font-semibold text-white disabled:opacity-40">
+          className={`btn-primary w-full rounded-2xl py-5 text-xl transition disabled:opacity-40 disabled:shadow-none ${mic.recording ? 'rec-ring bg-none bg-stop' : 'glow-stamp'}`}>
           {mic.starting ? 'Opening microphone…'
             : mic.recording ? `Recording… ${Math.max(RECORD_SECONDS - mic.elapsed, 0)} s`
             : checking ? 'Checking with your bank…'
@@ -80,7 +81,7 @@ export default function AppPage() {
       </div>
 
       {error && (
-        <div className="space-y-2 rounded-xl bg-red-50 p-3 text-red-800">
+        <div className="space-y-2 rounded-2xl border border-stop/50 bg-red-50 p-4 text-red-800">
           <p className="font-semibold">Could not check this caller</p>
           <p className="break-words text-sm">{error}</p>
           <p className="text-sm">Until it is checked, treat the caller as unconfirmed.</p>
@@ -101,7 +102,7 @@ function CustomerPicker({ customers, peopleError, value, onChange, disabled }) {
       <label htmlFor="who" className="block text-sm font-medium">Logged in as</label>
       {customers.length > 0 ? (
         <select id="who" value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled}
-          className="w-full rounded-lg border bg-white px-3 py-3 text-lg">
+          className="w-full rounded-xl border px-4 py-3 text-lg">
           <option value="">choose…</option>
           {customers.map((p) => (
             <option key={p.person_id} value={p[CUSTOMER_ID_FIELD]}>{p.display_name} ({p[CUSTOMER_ID_FIELD]})</option>
@@ -110,8 +111,8 @@ function CustomerPicker({ customers, peopleError, value, onChange, disabled }) {
       ) : (
         <>
           <input id="who" value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled}
-            placeholder="your customer id" className="w-full rounded-lg border px-3 py-3 text-lg" />
-          <p className="text-xs text-slate-500">
+            placeholder="your customer id" className="w-full rounded-xl border px-4 py-3 text-lg" />
+          <p className="text-sm text-slate-500">
             {peopleError ? `Customer list unavailable (${peopleError}) — type your id.` : 'No enrolled customers — type your id.'}
           </p>
         </>
@@ -126,28 +127,34 @@ function Result({ result }) {
   return (
     <div className="space-y-4">
       {verified ? (
-        <div className="rounded-xl bg-green-600 p-4 text-white">
-          <p className="break-words text-2xl font-bold">
-            Verified: {employee?.name ?? 'unknown name'}, {employee?.department ?? 'unknown department'}
-          </p>
-          <p className="mt-1">You can continue the call.</p>
+        <div className="badge-in flex gap-4 rounded-2xl bg-pass p-5 text-white glow-pass">
+          <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-white/20"><CheckIcon className="h-9 w-9" /></span>
+          <div className="min-w-0">
+            <p className="break-words text-2xl font-bold">
+              Verified: {employee?.name ?? 'unknown name'}, {employee?.department ?? 'unknown department'}
+            </p>
+            <p className="mt-1 text-lg">You can continue the call.</p>
+          </div>
         </div>
       ) : (
-        <div className="space-y-3 rounded-xl bg-red-600 p-4 text-white">
-          <p className="text-2xl font-bold">We can't confirm this caller</p>
-          <p>Hang up and call your bank's official number.</p>
+        <div className="badge-in space-y-3 rounded-2xl bg-stop p-5 text-white glow-stop">
+          <div className="flex items-center gap-3">
+            <StopIcon className="h-10 w-10 shrink-0" />
+            <p className="text-2xl font-bold">We can't confirm this caller</p>
+          </div>
+          <p className="text-lg">Hang up and call your bank's official number.</p>
           <OfficialNumber />
         </div>
       )}
 
-      <ul className="divide-y rounded-xl border">
+      <ul className="glass divide-y divide-white/10">
         <CallLogCheck c={checks.call_log} />
         <SpeakerCheck s={checks.speaker} />
         <AuthenticityCheck a={checks.authenticity} />
       </ul>
 
       {next_step && (
-        <p className="rounded-xl bg-slate-100 p-3"><span className="font-semibold">Next step: </span>{next_step}</p>
+        <p className="glass p-4"><span className="font-semibold">Next step: </span>{next_step}</p>
       )}
     </div>
   )
@@ -156,11 +163,11 @@ function Result({ result }) {
 // Big "call the bank" button — only with a configured number; otherwise point to the card.
 function OfficialNumber() {
   if (!OFFICIAL_NUMBER) {
-    return <p className="rounded-xl bg-white p-4 text-center text-lg font-semibold text-red-700">Use the number on the back of your card</p>
+    return <p className="rounded-2xl bg-white p-5 text-center text-xl font-bold text-stop">Use the number on the back of your card</p>
   }
   return (
     <a href={`tel:${OFFICIAL_NUMBER.replace(/[^\d+]/g, '')}`}
-      className="block rounded-xl bg-white p-4 text-center text-lg font-semibold text-red-700">
+      className="block rounded-2xl bg-white p-5 text-center text-xl font-bold text-stop shadow-[0_0_30px_-6px_rgb(255_255_255/0.6)]">
       Call your bank: {OFFICIAL_NUMBER}
     </a>
   )

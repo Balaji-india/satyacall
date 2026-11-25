@@ -13,14 +13,14 @@ function statusText({ status, myId, otherId, incoming }) {
   }
 }
 
-const DOT = { offline: 'bg-slate-400', connecting: 'bg-amber-400', online: 'bg-green-500',
-  ringing: 'bg-amber-500 animate-pulse', 'in-call': 'bg-green-600', ended: 'bg-slate-500' }
+const DOT = { offline: 'bg-slate-400', connecting: 'bg-amber-400', online: 'bg-green-500 glow-pass',
+  ringing: 'bg-amber-500 animate-pulse', 'in-call': 'bg-green-600 glow-pass', ended: 'bg-slate-500' }
 
 // onHangUp (optional): what "Hang up" does. /agent passes one that also ends monitoring.
 // big: phone-sized buttons that share the row (customer /call page).
 export default function CallPanel({ call, onHangUp = call.hangUp, big = false }) {
   const inCallOrRinging = call.status === 'ringing' || call.status === 'in-call'
-  const btn = big ? 'flex-1 rounded-xl py-4 text-lg font-semibold' : 'rounded px-4 py-2'
+  const btn = big ? 'flex-1 rounded-2xl py-4 text-lg font-semibold' : 'rounded-xl px-4 py-2 font-semibold'
   return (
     <div className="space-y-3">
       <p className="flex items-center gap-2 break-words font-medium">
@@ -32,14 +32,14 @@ export default function CallPanel({ call, onHangUp = call.hangUp, big = false })
 
       <div className={`flex gap-2 ${big ? '' : 'flex-wrap'}`}>
         {call.incoming && (
-          <button onClick={call.answer} className={`${btn} bg-green-600 text-white`}>Answer</button>
+          <button onClick={call.answer} className={`${btn} bg-pass text-white glow-pass`}>Answer</button>
         )}
         <button onClick={call.toggleMute} disabled={call.status === 'offline' || call.status === 'connecting'}
-          className={`${btn} border disabled:opacity-40 ${call.muted ? 'bg-amber-400' : ''}`}>
+          className={`${btn} border disabled:opacity-40 ${call.muted ? 'bg-warn text-slate-950' : 'bg-white/5'}`}>
           {call.muted ? 'Unmute' : 'Mute'}
         </button>
         <button onClick={call.incoming ? call.hangUp : onHangUp} disabled={!inCallOrRinging}
-          className={`${btn} bg-red-600 text-white disabled:opacity-40`}>
+          className={`${btn} bg-stop text-white glow-stop disabled:opacity-40 disabled:shadow-none`}>
           {call.incoming ? 'Decline' : 'Hang up'}
         </button>
       </div>

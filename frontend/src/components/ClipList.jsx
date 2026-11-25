@@ -45,7 +45,7 @@ function ResultRow({ row }) {
           <span className="text-slate-600">score {a.score} vs threshold {a.threshold} (higher = more likely AI)</span>
         </>
       )}
-      <span className={`rounded px-2 py-0.5 text-xs ${IDENTITY_STYLE[r.identity] ?? 'bg-slate-100'}`}>
+      <span className={`rounded px-2 py-0.5 text-sm ${IDENTITY_STYLE[r.identity] ?? 'bg-slate-100'}`}>
         identity: {r.identity}
       </span>
       <span className="text-slate-600">state: {r.call_state}</span>

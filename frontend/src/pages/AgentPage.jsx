@@ -27,18 +27,18 @@ export default function AgentPage() {
   }
 
   return (
-    <section className="space-y-4 rounded-lg border bg-white p-6">
-      <h1 className="text-2xl font-semibold">Agent console</h1>
+    <section className="space-y-5">
+      <h1 className="text-3xl font-bold font-stretch-expanded">Agent console</h1>
       {!m.callId && (
         <p className="text-sm text-slate-600">
           Go online to take customer calls (or call one outbound). Once connected, start monitoring to see the trust timeline.
         </p>
       )}
 
-      <div className="flex flex-wrap items-start gap-6">
+      <div className="glass flex flex-wrap items-start gap-6 p-4">
         {!online && (
           <button onClick={() => call.goOnline(AGENT_PEER_ID)} disabled={call.status === 'connecting'}
-            className="rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-40">
+            className="btn-primary px-4 py-2 disabled:opacity-40 disabled:shadow-none">
             {call.status === 'connecting' ? 'Going online…' : `Go online as ${AGENT_PEER_ID}`}
           </button>
         )}
@@ -47,9 +47,9 @@ export default function AgentPage() {
             onSubmit={(e) => { e.preventDefault(); call.callPeer(customerPeerId(customerId.trim())) }}>
             <label className="text-sm text-slate-600" htmlFor="outbound">Outbound call — customer id</label>
             <input id="outbound" value={customerId} onChange={(e) => setCustomerId(e.target.value)}
-              placeholder="e.g. C001" className="rounded border px-2 py-1" />
+              placeholder="e.g. C001" className="rounded-lg border px-2 py-1.5" />
             <button disabled={!customerId.trim() || call.status === 'ringing' || call.status === 'in-call'}
-              className="rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-40">
+              className="btn-primary px-4 py-2 disabled:opacity-40 disabled:shadow-none">
               {call.status === 'ringing' && call.direction === 'outbound'
                 ? `Calling ${call.otherId}…` : `Call ${customerPeerId(customerId.trim() || '…')}`}
             </button>
@@ -62,8 +62,8 @@ export default function AgentPage() {
 
       {m.callId && (
         <div className="grid gap-4 lg:grid-cols-3">
-          <div className="space-y-3 lg:col-span-2">
-            <h2 className="text-lg font-semibold">Trust timeline</h2>
+          <div className="glass min-w-0 space-y-3 p-4 lg:col-span-2">
+            <h2 className="text-xl font-semibold">Trust timeline</h2>
             <TrustTimeline rows={m.rows} />
             <details>
               <summary className="cursor-pointer text-sm text-slate-600">Clip list ({m.rows.length})</summary>

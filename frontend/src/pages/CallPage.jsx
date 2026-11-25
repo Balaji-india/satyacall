@@ -6,7 +6,7 @@ import CallPanel from '../components/CallPanel'
 import { usePeerCall } from '../usePeerCall'
 import { AGENT_PEER_ID, customerPeerId } from '../peer'
 
-const BIG = 'w-full rounded-xl py-4 text-lg font-semibold disabled:opacity-40'
+const BIG = 'w-full rounded-2xl py-5 text-xl font-semibold transition disabled:opacity-40 disabled:shadow-none'
 
 export default function CallPage() {
   const call = usePeerCall()
@@ -27,9 +27,9 @@ export default function CallPage() {
           onSubmit={(e) => { e.preventDefault(); call.goOnline(customerPeerId(customerId.trim())) }}>
           <label className="block text-sm font-medium" htmlFor="cid">Your customer id</label>
           <input id="cid" value={customerId} onChange={(e) => setCustomerId(e.target.value)} disabled={connecting}
-            placeholder="e.g. C001" className="w-full rounded-lg border px-3 py-3 text-lg" />
+            placeholder="e.g. C001" className="w-full rounded-xl border px-4 py-3 text-lg" />
           <p className="text-sm text-slate-600">Go online first — then you can call the bank, and the bank can call you.</p>
-          <button disabled={!customerId.trim() || connecting} className={`${BIG} bg-stamp text-white`}>
+          <button disabled={!customerId.trim() || connecting} className={`${BIG} btn-primary glow-stamp`}>
             {connecting ? 'Going online…' : 'Go online'}
           </button>
         </form>
@@ -38,7 +38,7 @@ export default function CallPage() {
       {online && (
         <button onClick={() => call.callPeer(AGENT_PEER_ID)}
           disabled={call.status === 'ringing' || call.status === 'in-call'}
-          className={`${BIG} bg-green-600 text-white`}>
+          className={`${BIG} bg-pass text-white glow-pass`}>
           {callLabel}
         </button>
       )}

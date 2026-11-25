@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { errorText, getHealth } from '../api'
+import { ShieldIcon } from './Icons'
 
 export default function Header() {
   // null = still checking; { ok: true, data } or { ok: false, error } after the request
@@ -21,12 +22,13 @@ export default function Header() {
   const checkHealth = () => { setHealth(null); loadHealth() }
 
   return (
-    <header className="bg-ink text-white">
+    <header className="border-b border-white/10 bg-paper/60 text-white backdrop-blur">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-3 py-3 sm:px-4">
         {/* Same wide wordmark as the customer app; "Agent Desk" condensed, so it reads as a sub-brand. */}
-        <Link to="/agent" className="flex items-baseline gap-2">
+        <Link to="/agent" className="flex items-center gap-2">
+          <span className="grid h-9 w-9 place-items-center rounded-xl bg-stamp/20 text-stamp glow-stamp"><ShieldIcon /></span>
           <span className="text-xl font-bold tracking-tight font-stretch-expanded">SatyaBank</span>
-          <span className="text-lg text-white/75 font-stretch-condensed">Agent Desk</span>
+          <span className="text-xl text-white/75 font-stretch-condensed">Agent Desk</span>
         </Link>
 
         {/* The only link: enrolment is an admin task, so it stays small. */}
@@ -34,8 +36,8 @@ export default function Header() {
           ? <Link to="/agent" className="text-sm text-white/70 underline hover:text-white">Back to agent desk</Link>
           : <Link to="/enroll" className="text-sm text-white/70 underline hover:text-white">Enroll (admin)</Link>}
 
-        {/* White chip so the green/red status keeps its contrast on the dark header. */}
-        <button onClick={checkHealth} disabled={health === null} className="ml-auto rounded bg-white px-2 py-1 text-left text-sm" title="Click to re-check the backend">
+        {/* Glass chip; green/red text = the real backend status. */}
+        <button onClick={checkHealth} disabled={health === null} className="glass ml-auto px-3 py-1.5 text-left text-sm" title="Click to re-check the backend">
           <HealthText health={health} />
         </button>
       </div>
@@ -49,7 +51,7 @@ function HealthText({ health }) {
   if (!health.ok) {
     return (
       <span className="text-red-600">
-        ● Backend unreachable <span className="text-xs">— {errorText(health.error)} · click to retry</span>
+        ● Backend unreachable <span className="text-sm">— {errorText(health.error)} · click to retry</span>
       </span>
     )
   }
