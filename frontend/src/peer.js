@@ -6,6 +6,10 @@ import Peer from 'peerjs'
 
 const HOST = import.meta.env.VITE_PEER_HOST
 const PORT = import.meta.env.VITE_PEER_PORT
+// VITE_PEER_LAN_ONLY=true → no STUN/TURN servers: only direct host candidates (same hotspot /
+// same laptop), so call audio can never go through PeerJS's internet relay. Signalling unchanged.
+export const LAN_ONLY = import.meta.env.VITE_PEER_LAN_ONLY === 'true'
+export const LAN_FAILED_TEXT = 'Direct connection failed — check both devices are on the same hotspot.'
 
 // Peer ids live on the PUBLIC PeerJS cloud, so they carry a "satyacall-" prefix to avoid
 // clashing with other people's apps. Agent desk = one fixed id; customers = prefix + their id.
@@ -13,8 +17,24 @@ export const AGENT_PEER_ID = 'satyacall-agent-desk'
 export const customerPeerId = (customerId) => `satyacall-customer-${customerId}`
 
 export function createPeer(id) {
-  if (!HOST) return new Peer(id)
-  return new Peer(id, { host: HOST, port: Number(PORT) || 9000, path: '/' })
+  const options = LAN_ONLY ? { config: { iceServers: [] } } : {}
+  if (HOST) Object.assign(options, { host: HOST, port: Number(PORT) || 9000, path: '/' })
+  return new Peer(id, options)
+}
+
+// Which network path the call really uses, from RTCPeerConnection.getStats(): the selected
+// candidate pair → local/remote candidateType + currentRoundTripTime. null = not known yet.
+export async function readLink(pc) {
+  if (!pc) return null
+  const stats = await pc.getStats()
+  let pair = null
+  stats.forEach((s) => { if (s.type === 'transport' && s.selectedCandidatePairId) pair = stats.get(s.selectedCandidatePairId) })
+  if (!pair) stats.forEach((s) => { if (s.type === 'candidate-pair' && s.state === 'succeeded' && (s.selected || s.nominated)) pair = s })
+  if (!pair) return null
+  const local = stats.get(pair.localCandidateId)?.candidateType
+  const remote = stats.get(pair.remoteCandidateId)?.candidateType
+  const rttMs = pair.currentRoundTripTime == null ? null : Math.round(pair.currentRoundTripTime * 1000)
+  return { local, remote, rttMs }
 }
 
 // Same rule PeerJS uses for ids: letters/digits, with single - _ or space between them.
@@ -36,6 +56,8 @@ export function peerErrorText(err, myId, otherId) {
         'Check the network, or run `npx peer --port 9000` and set VITE_PEER_HOST / VITE_PEER_PORT.'
     case 'invalid-id':
       return `"${myId}" is not a valid peer id (letters, digits, - or _ only).`
+    case 'negotiation-failed':
+      return LAN_ONLY ? LAN_FAILED_TEXT : `Call connection failed (${err?.message ?? 'ICE failed'}).`
     case 'browser-incompatible':
       return 'This browser does not support WebRTC calls. Use Chrome or Edge.'
     default:

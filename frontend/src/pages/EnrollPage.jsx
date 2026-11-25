@@ -1,9 +1,13 @@
 // /enroll — enroll a customer or agent voice with DetectifAI Eidos (B5).
 // Record 25 s from the mic (or choose a file) → preview → POST /api/people/enroll → show the
 // backend's { speaker_id, samples, speech_seconds }. Every number shown comes from the backend.
+// Sign-up mode (B10, /enroll?signup=customer|agent): role is fixed, enrolling the voice IS the
+// sign-up; fields can be pre-filled from the URL (?name=&phone=&employee_id=&department=).
 import { useEffect, useRef, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { enrollPerson, errorCode, errorText, listPeople } from '../api'
 import PeopleList from '../components/PeopleList'
+import { LOGIN_PATH } from '../session'
 import { useMicRecorder } from '../useMicRecorder'
 
 const RECORD_SECONDS = 25            // inside DetectifAI's 15–60 s enrollment window
@@ -26,8 +30,16 @@ function errorHint(err) {
   return ''
 }
 
-export default function EnrollPage() {
-  const [form, setForm] = useState({ display_name: '', person_id: '', role: 'customer', phone: '', employee_id: '', department: '' })
+// signup = 'customer' | 'agent' on the sign-up page; undefined on the admin page.
+export default function EnrollPage({ signup }) {
+  const [params] = useSearchParams()
+  const [form, setForm] = useState(() => {
+    const name = params.get('name') ?? ''
+    return {
+      display_name: name, person_id: slugify(name), role: signup ?? 'customer',
+      phone: params.get('phone') ?? '', employee_id: params.get('employee_id') ?? '', department: params.get('department') ?? '',
+    }
+  })
   const [idEdited, setIdEdited] = useState(false) // person_id follows the name until edited by hand
   const [audio, setAudio] = useState(null)        // { blob, url, seconds|null, filename, source }
   const [submitting, setSubmitting] = useState(false)
@@ -102,8 +114,15 @@ export default function EnrollPage() {
   const input = 'w-full rounded border px-2 py-1'
 
   return (
-    <section className="space-y-6 rounded-lg border bg-white p-6">
-      <h1 className="text-2xl font-semibold">Enroll a voice</h1>
+    <section className="glass space-y-6 p-6">
+      {signup ? (
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold">{signup === 'agent' ? 'Create a staff account' : 'Create your SatyaBank account'}</h1>
+          <p className="text-slate-600">Your voice sample becomes your account's voice ID (~200 credits).</p>
+        </div>
+      ) : (
+        <h1 className="text-2xl font-semibold">Enroll a voice</h1>
+      )}
 
       <form onSubmit={submit} className="grid gap-4 md:grid-cols-2">
         {/* Who */}
@@ -115,7 +134,7 @@ export default function EnrollPage() {
             <input value={form.person_id} placeholder="balaji" className={`${input} font-mono`}
               onChange={(e) => { setIdEdited(true); set('person_id')(e) }} />
           </label>
-          <div className="flex gap-4">
+          <div className="flex gap-4" hidden={!!signup}>
             {['customer', 'agent'].map((r) => (
               <label key={r} className="flex items-center gap-1">
                 <input type="radio" name="role" value={r} checked={form.role === r} onChange={set('role')} /> {r}
@@ -146,7 +165,7 @@ export default function EnrollPage() {
           <div className="flex flex-wrap items-center gap-2">
             {!mic.recording ? (
               <button type="button" onClick={mic.start} disabled={submitting || mic.starting}
-                className="rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-40">
+                className="btn-primary px-4 py-2 disabled:opacity-40">
                 {mic.starting ? 'Opening microphone…' : audio ? 'Record again' : `Record ${RECORD_SECONDS} s`}
               </button>
             ) : (
@@ -161,7 +180,7 @@ export default function EnrollPage() {
           </div>
 
           {mic.recording && (
-            <p className={`rounded p-2 text-center font-semibold text-white ${mic.elapsed < MIN_SECONDS ? 'bg-amber-600' : 'bg-green-700'}`}>
+            <p className={`rounded p-2 text-center font-semibold text-white ${mic.elapsed < MIN_SECONDS ? 'bg-amber-600' : 'bg-pass'}`}>
               ● Recording… {RECORD_SECONDS - mic.elapsed} s left
               {mic.elapsed < MIN_SECONDS && ` (stopping now gives only ${mic.elapsed} s — under ${MIN_SECONDS} s)`}
             </p>
@@ -196,7 +215,9 @@ export default function EnrollPage() {
             <div className="rounded border-2 border-green-600 bg-green-50 p-2">
               <p className="font-semibold text-green-800">✓ Enrolled {result.person_id}</p>
               <p>speaker_id <span className="font-mono">{result.speaker_id}</span> · samples {result.samples ?? '—'} · speech {result.speech_seconds ?? '—'} s</p>
-              <p className="text-slate-600">Next step: test it on a call. Add a second sample only if credits allow.</p>
+              {signup
+                ? <p><Link to={LOGIN_PATH[signup]} className="font-semibold text-tide underline">Account created — sign in now</Link></p>
+                : <p className="text-slate-600">Next step: test it on a call. Add a second sample only if credits allow.</p>}
             </div>
           )}
         </div>
@@ -206,7 +227,8 @@ export default function EnrollPage() {
         Each sample costs 200 credits. Add a second sample (recorded over a call or on another device) only if credits allow.
       </p>
 
-      <PeopleList people={people} error={peopleError} onRefresh={loadPeople} />
+      {/* A new customer signing up should not see everyone enrolled. */}
+      {!signup && <PeopleList people={people} error={peopleError} onRefresh={loadPeople} />}
     </section>
   )
 }

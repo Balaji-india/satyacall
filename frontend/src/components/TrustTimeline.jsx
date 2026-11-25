@@ -4,6 +4,7 @@
 // threshold from the latest response — evidence only; the backend decides with `verdict`.
 import { Bar, BarChart, CartesianGrid, Cell, ReferenceArea, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { authenticityText, speakerText } from '../checkText'
+import { useCalm } from '../effects'
 
 // Status colours (fixed meaning, always shown with a text label in the legend / tooltip).
 const COLOUR = { green: '#0ca30c', amber: '#fab219', red: '#d03b3b' }
@@ -28,6 +29,7 @@ function noScoreText(row) {
 }
 
 export default function TrustTimeline({ rows }) {
+  const calm = useCalm() // call active or "Reduce effects" → no bar animation (saves CPU)
   if (rows.length === 0) {
     return <p className="text-sm text-slate-500">No clips yet — the first bar appears about 10 s after monitoring starts.</p>
   }
@@ -54,40 +56,42 @@ export default function TrustTimeline({ rows }) {
       <div className="h-64 w-full">
         <ResponsiveContainer>
           <BarChart data={data} margin={{ top: 16, right: 16, bottom: 16, left: 0 }}>
-            <CartesianGrid vertical={false} stroke="#e1e0d9" />
-            <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#475569' }} stroke="#c3c2b7"
-              label={{ value: 'clip start (seconds into the call)', position: 'insideBottom', offset: -8, fontSize: 11 }} />
-            <YAxis domain={[0, 1]} ticks={[0, 0.25, 0.5, 0.75, 1]} tick={{ fontSize: 11, fill: '#475569' }} stroke="#c3c2b7" width={44}
-              label={{ value: 'AI score', angle: -90, position: 'insideLeft', offset: 12, fontSize: 11 }} />
+            <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.08)" />
+            <XAxis dataKey="label" tick={{ fontSize: 13, fill: '#c0cad8' }} stroke="rgba(255,255,255,0.25)"
+              label={{ value: 'clip start (seconds into the call)', position: 'insideBottom', offset: -8, fontSize: 13, fill: '#a3b1c6' }} />
+            <YAxis domain={[0, 1]} ticks={[0, 0.25, 0.5, 0.75, 1]} tick={{ fontSize: 13, fill: '#c0cad8' }} stroke="rgba(255,255,255,0.25)" width={48}
+              label={{ value: 'AI score', angle: -90, position: 'insideLeft', offset: 12, fontSize: 13, fill: '#a3b1c6' }} />
 
             {/* Grey band = this clip has no score. Spans the time slot, height means nothing. */}
             {data.filter((d) => d.missing).map((d) => (
               <ReferenceArea key={d.label} x1={d.label} x2={d.label} y1={0} y2={1}
-                fill={GREY} fillOpacity={0.2} stroke="none"
-                label={{ value: d.missing, position: 'insideTop', fontSize: 10, fill: '#475569' }} />
+                fill={GREY} fillOpacity={0.18} stroke="none"
+                label={{ value: d.missing, position: 'insideTop', fontSize: 12, fill: '#c0cad8' }} />
             ))}
 
             {latestThreshold != null && (
-              <ReferenceLine y={latestThreshold} stroke="#334155" strokeDasharray="5 4"
-                label={{ value: `threshold ${latestThreshold}`, position: 'insideTopRight', fontSize: 11, fill: '#334155' }} />
+              <ReferenceLine y={latestThreshold} stroke="#e2e8f0" strokeDasharray="5 4"
+                label={{ value: `threshold ${latestThreshold}`, position: 'insideTopRight', fontSize: 13, fill: '#e2e8f0' }} />
             )}
 
-            <Tooltip content={<ClipTooltip byLabel={byLabel} />} filterNull={false} cursor={{ fill: 'rgba(15,23,42,0.06)' }} />
+            <Tooltip content={<ClipTooltip byLabel={byLabel} />} filterNull={false} cursor={{ fill: 'rgba(255,255,255,0.06)' }} />
 
             {/* minPointSize: a real voice scores ~0.003, so give real bars a 3 px sliver to stay
-                visible. Bars with no score (null) get 0 → nothing drawn. */}
-            <Bar dataKey="score" isAnimationActive={false} radius={[4, 4, 0, 0]} maxBarSize={48}
+                visible. Bars with no score (null) get 0 → nothing drawn. Bars rise in with Recharts'
+                own animation; the glow is a drop-shadow in the bar's own status colour. */}
+            <Bar dataKey="score" isAnimationActive={!calm} animationDuration={700} animationEasing="ease-out" radius={[4, 4, 0, 0]} maxBarSize={48}
               minPointSize={(value) => (value == null ? 0 : 3)}>
-              {data.map((d) => <Cell key={d.label} fill={COLOUR[d.status] ?? GREY} />)}
+              {data.map((d) => <Cell key={d.label} fill={COLOUR[d.status] ?? GREY}
+                style={{ filter: `drop-shadow(0 0 6px ${COLOUR[d.status] ?? GREY})` }} />)}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>
 
-      <ul className="flex flex-wrap gap-4 text-xs text-slate-600">
+      <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-600">
         {LEGEND.map((l) => (
           <li key={l.text} className="flex items-center gap-1">
-            <span className="inline-block h-3 w-3 rounded-sm" style={{ background: l.colour }} /> {l.text}
+            <span className="inline-block h-3 w-3 rounded-sm" style={{ background: l.colour, boxShadow: `0 0 8px ${l.colour}` }} /> {l.text}
           </li>
         ))}
         <li className="flex items-center gap-1">
@@ -105,7 +109,7 @@ function ClipTooltip({ active, label, byLabel }) {
   const { row } = d
   const r = row.result
   return (
-    <div className="max-w-xs rounded border bg-white p-2 text-xs shadow">
+    <div className="max-w-xs space-y-0.5 rounded-xl border border-white/15 bg-night/95 p-3 text-sm text-ink shadow-xl backdrop-blur">
       <p className="font-semibold">{row.t_start}–{row.t_end} s · {r ? `status ${r.status}` : d.missing}</p>
       {r ? (
         <>

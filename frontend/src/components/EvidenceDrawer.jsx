@@ -45,7 +45,7 @@ export default function EvidenceDrawer({ m }) {
               </div>
               <details>
                 <summary className="cursor-pointer text-slate-600">Raw JSON</summary>
-                <pre className="max-h-72 overflow-auto rounded bg-slate-900 p-2 text-xs text-slate-100">
+                <pre className="max-h-72 overflow-auto rounded bg-slate-900 p-2 text-sm text-slate-300">
                   {JSON.stringify(c.data, null, 2)}
                 </pre>
               </details>
@@ -78,7 +78,7 @@ function Feedback({ label, operationId }) {
       <button onClick={() => send(true)} disabled={state?.sending} className="rounded border px-2 disabled:opacity-40">✓</button>
       <button onClick={() => send(false)} disabled={state?.sending} className="rounded border px-2 disabled:opacity-40">✗</button>
       {state?.sending && <span className="text-slate-500">sending…</span>}
-      {state?.text && <span className={`text-xs ${state.ok ? 'text-green-700' : 'text-red-700'}`}>{state.text}</span>}
+      {state?.text && <span className={`text-sm ${state.ok ? 'text-green-700' : 'text-red-700'}`}>{state.text}</span>}
     </span>
   )
 }

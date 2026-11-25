@@ -6,6 +6,7 @@ import { errorText, requestAction, sayItBack } from '../api'
 import { authenticityText, speakerText } from '../checkText'
 import { CLIP_SECONDS, recordClip } from '../clipRecorder'
 import { toWav16kMono } from '../toWav'
+import { CheckIcon, StopIcon } from './Icons'
 
 const ACTIONS = [
   ['balance', 'Balance enquiry'], ['card_status', 'Card status'], ['statement', 'Statement'],
@@ -34,6 +35,9 @@ export default function RequestPanel({ m, remoteStream }) {
   const [action, setAction] = useState(null)   // { label, response } of the current request
   const [sibStart, setSibStart] = useState(0)  // m.sayItBacks index where this request's results start
   const [rec, setRec] = useState(null)         // null | { attempt, secondsLeft, phase: recording|checking }
+  // Agent pressed "Stop — use fallback" after attempt 1 (their decision; no 2nd recording,
+  // so no more DetectifAI credits are spent on this request). Nothing is sent to the backend.
+  const [agentFallback, setAgentFallback] = useState(false)
 
   const live = m.phase === 'live'
   const busy = sending || rec !== null
@@ -46,7 +50,7 @@ export default function RequestPanel({ m, remoteStream }) {
 
   const submit = async (e) => {
     e.preventDefault()
-    setError(''); setAction(null); setSending(true)
+    setError(''); setAction(null); setAgentFallback(false); setSending(true)
     const params = {}
     for (const f of fields) {
       const v = (values[f] ?? '').trim()
@@ -87,31 +91,31 @@ export default function RequestPanel({ m, remoteStream }) {
   }
 
   const decision = action?.response?.decision
-  const fallback = decision === 'fallback' || result?.next_step === 'fallback'
+  const fallback = decision === 'fallback' || result?.next_step === 'fallback' || agentFallback
 
   return (
-    <section className="space-y-3 rounded-lg border p-4">
-      <h2 className="text-lg font-semibold">Customer request</h2>
+    <section className="glass min-w-0 space-y-3 p-4">
+      <h2 className="text-xl font-semibold">Customer request</h2>
 
       <form onSubmit={submit} className="space-y-2 text-sm">
-        <select value={actionType} onChange={(e) => { setActionType(e.target.value); setAction(null) }}
-          className="w-full rounded border bg-white px-2 py-1" disabled={busy}>
+        <select value={actionType} onChange={(e) => { setActionType(e.target.value); setAction(null); setAgentFallback(false) }}
+          className="w-full rounded-lg border px-3 py-2" disabled={busy}>
           {ACTIONS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
         </select>
         {fields.map((f) => (
           <input key={f} value={values[f] ?? ''} placeholder={FIELD_LABEL[f]} aria-label={FIELD_LABEL[f]}
             type={f === 'amount' ? 'number' : f === 'new_email' ? 'email' : 'text'} min={f === 'amount' ? 1 : undefined}
             onChange={(e) => setValues({ ...values, [f]: e.target.value })}
-            className="w-full rounded border px-2 py-1" disabled={busy} />
+            className="w-full rounded-lg border px-3 py-2" disabled={busy} />
         ))}
         <button disabled={!live || busy || fields.some((f) => !(values[f] ?? '').trim())}
-          className="w-full rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-40">
+          className="btn-primary w-full px-4 py-2.5 disabled:opacity-40 disabled:shadow-none">
           {sending ? 'Checking request…' : 'Check request'}
         </button>
         {!live && <p className="text-slate-500">Start monitoring a call first.</p>}
       </form>
 
-      {error && <p className="rounded bg-red-50 p-2 text-sm text-red-700">{error}</p>}
+      {error && <p className="rounded-xl border border-stop/50 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
 
       {action && (
         <p className="text-sm text-slate-600">
@@ -121,8 +125,8 @@ export default function RequestPanel({ m, remoteStream }) {
 
       {/* allow → green card with the evidence it was based on */}
       {decision === 'allow' && (
-        <div className="rounded border-2 border-green-600 bg-green-50 p-3 text-sm">
-          <p className="text-lg font-bold text-green-800">✓ Allowed ({action.response.risk} risk)</p>
+        <div className="badge-in space-y-1 rounded-2xl border-2 border-pass bg-green-50 p-4 text-sm glow-pass">
+          <p className="text-xl font-bold text-green-800">✓ Allowed ({action.response.risk} risk)</p>
           <p>Evidence: call state <b>{m.callState ?? 'none yet'}</b>, identity <b>{m.identity ?? 'none yet'}</b>
             {latestClip && <> · latest clip: {latestClip.status === 'skipped' ? 'skipped' : authenticityText(latestClip.authenticity)}</>}</p>
           <p>Next step: go ahead with the request.</p>
@@ -131,12 +135,12 @@ export default function RequestPanel({ m, remoteStream }) {
 
       {/* say_it_back → the sentence big + record button(s) */}
       {decision === 'say_it_back' && (
-        <div className="space-y-2 rounded border-2 border-slate-800 p-3">
-          <p className="text-xs uppercase text-slate-500">Ask the customer to say</p>
-          <p className="text-xl font-semibold leading-snug">“{action.response.sentence ?? 'the backend sent no sentence'}”</p>
+        <div className="quote-card space-y-3 p-5">
+          <p className="text-sm text-slate-500">Ask the customer to say</p>
+          <p className="text-3xl font-semibold leading-snug text-white">“{action.response.sentence ?? 'the backend sent no sentence'}”</p>
 
           {rec && (
-            <p className="rounded bg-slate-900 p-2 text-center text-white">
+            <p className={`rounded-xl p-3 text-center text-lg font-semibold text-white ${rec.phase === 'recording' ? 'rec-ring border-2 border-stop bg-stop/25' : 'bg-white/10'}`}>
               {rec.phase === 'recording'
                 ? `● Recording customer… ${rec.secondsLeft} s (attempt ${rec.attempt})`
                 : `Checking attempt ${rec.attempt} (speech-to-text + Eidos + Aletheia)…`}
@@ -145,15 +149,22 @@ export default function RequestPanel({ m, remoteStream }) {
 
           {!rec && !result && (
             <button onClick={() => confirm(1)} disabled={!live}
-              className="w-full rounded bg-blue-700 px-4 py-2 font-semibold text-white disabled:opacity-40">
+              className="btn-primary w-full px-4 py-3 text-lg glow-stamp disabled:opacity-40 disabled:shadow-none">
               Record confirmation ({CLIP_SECONDS} s)
             </button>
           )}
-          {!rec && result?.next_step === 'retry' && (
-            <button onClick={() => confirm(2)} disabled={!live}
-              className="w-full rounded bg-amber-500 px-4 py-2 font-semibold disabled:opacity-40">
-              Try again (attempt 2)
-            </button>
+          {!rec && result?.next_step === 'retry' && !agentFallback && (
+            <div className="flex gap-2">
+              <button onClick={() => confirm(2)} disabled={!live}
+                className="flex-1 rounded-xl bg-warn px-4 py-2.5 font-semibold text-slate-950 glow-warn disabled:opacity-40">
+                Try again (attempt 2)
+              </button>
+              <button onClick={() => setAgentFallback(true)}
+                title="Skip attempt 2: no new recording, no more credits spent"
+                className="flex-1 rounded-xl bg-stop px-4 py-2.5 font-semibold text-white glow-stop">
+                Stop — use fallback
+              </button>
+            </div>
           )}
         </div>
       )}
@@ -162,19 +173,23 @@ export default function RequestPanel({ m, remoteStream }) {
 
       {/* fallback (from the action decision, or after a failed Say-It-Back) */}
       {fallback && (
-        <div className="rounded bg-red-600 p-3 text-white">
-          <p className="text-lg font-bold">Do not proceed</p>
+        <div className="badge-in space-y-2 rounded-2xl bg-stop p-4 text-white glow-stop">
+          <p className="flex items-center gap-2 text-2xl font-bold"><StopIcon className="h-8 w-8 shrink-0" />Do not proceed</p>
           <p className="text-sm">
-            Evidence: {result ? 'Say-It-Back did not pass (details above)' : `backend decision "fallback" for ${action.label}`}
+            Evidence: {agentFallback ? 'Fallback chosen by agent after attempt 1 (Say-It-Back details above)'
+              : result ? 'Say-It-Back did not pass (details above)' : `backend decision "fallback" for ${action.label}`}
             {' '}· call state {m.callState ?? 'none yet'} · identity {m.identity ?? 'none yet'}
           </p>
-          <p className="text-sm">Next step: {FALLBACK_TEXT}</p>
+          <p className="rounded-xl bg-black/25 p-3 text-lg font-semibold">Next step: {FALLBACK_TEXT}</p>
         </div>
       )}
       {result?.next_step === 'approved' && (
-        <div className="rounded bg-green-600 p-3 text-white">
-          <p className="text-lg font-bold">✓ Approved</p>
-          <p className="text-sm">Next step: complete the customer's request.</p>
+        <div className="badge-in flex items-center gap-4 rounded-2xl bg-pass p-4 text-white glow-pass">
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white/20"><CheckIcon /></span>
+          <div>
+          <p className="text-2xl font-bold">Approved</p>
+          <p className="text-base">Next step: complete the customer's request.</p>
+          </div>
         </div>
       )}
     </section>
@@ -183,9 +198,9 @@ export default function RequestPanel({ m, remoteStream }) {
 
 // One Say-It-Back result: the evidence for each of the three checks.
 function SayItBackCard({ r }) {
-  const tone = r.pass ? 'border-green-600' : r.next_step === 'retry' ? 'border-amber-500' : 'border-red-600'
+  const tone = r.pass ? 'border-pass' : r.next_step === 'retry' ? 'border-warn' : 'border-stop'
   return (
-    <div className={`space-y-1 rounded border-l-4 ${tone} bg-slate-50 p-2 text-sm`}>
+    <div className={`badge-in space-y-1 rounded-xl border-l-4 ${tone} bg-white/5 p-3 text-sm`}>
       <p className="font-semibold">Say-It-Back: {r.pass ? 'passed' : 'not passed'} · next step {r.next_step}</p>
       <p><b>Heard:</b> “{r.transcript ?? '—'}”</p>
       <p><b>Expected:</b> “{r.expected ?? '—'}”</p>

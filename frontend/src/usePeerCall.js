@@ -1,7 +1,13 @@
 // usePeerCall — one PeerJS voice call (used by /call and /agent).
 // Status: offline → connecting → online → ringing → in-call → ended (still online, can call again).
 import { useEffect, useRef, useState } from 'react'
-import { createPeer, isValidPeerId, micErrorText, peerErrorText } from './peer'
+import { useCalmWhile } from './effects'
+import { createPeer, isValidPeerId, micErrorText, peerErrorText, readLink } from './peer'
+
+// Call mic: the browser's echo cancellation, noise suppression and auto gain stay ON (spelled out,
+// not left to defaults), so the other side never hears its own voice coming back. Only the
+// Verify-caller recorder (AppPage) turns them off — it uses its own getUserMedia, not this one.
+const CALL_MIC = { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
 
 export function usePeerCall() {
   const peerRef = useRef(null) // our Peer (connection to the signalling server)
@@ -16,6 +22,22 @@ export function usePeerCall() {
   const [remoteStream, setRemoteStream] = useState(null) // OTHER side's audio (B3 records this)
   const [muted, setMuted] = useState(false)
   const [error, setError] = useState('')
+  const [link, setLink] = useState(null) // { local, remote, rttMs } from getStats, while in a call
+
+  // Ringing / in a call → calm mode (background animation + blur off, see effects.js).
+  useCalmWhile(status === 'ringing' || status === 'in-call')
+
+  // In a call: read the selected ICE candidate pair every 2 s (direct LAN or relay + round trip).
+  useEffect(() => {
+    if (status !== 'in-call') return
+    let stop = false
+    const poll = () => readLink(callRef.current?.peerConnection)
+      .then((l) => { if (!stop && l) setLink(l) })
+      .catch(() => {}) // stats unavailable → badge just stays hidden
+    poll()
+    const timer = setInterval(poll, 2000)
+    return () => { stop = true; clearInterval(timer); setLink(null) } // call over → forget the old path
+  }, [status])
 
   // We keep StrictMode. The Peer is created on a button click (not in an effect), and this
   // cleanup destroys it on unmount / route change / hot reload, so the server frees the id
@@ -57,7 +79,7 @@ export function usePeerCall() {
     }
     setStatus('connecting')
     try {
-      micRef.current = await navigator.mediaDevices.getUserMedia({ audio: true })
+      micRef.current = await navigator.mediaDevices.getUserMedia({ audio: CALL_MIC })
     } catch (err) {
       setStatus('offline')
       return setError(micErrorText(err))
@@ -137,5 +159,5 @@ export function usePeerCall() {
     setMuted(next)
   }
 
-  return { status, myId, otherId, incoming, direction, remoteStream, muted, error, goOnline, callPeer, answer, hangUp, toggleMute }
+  return { status, myId, otherId, incoming, direction, remoteStream, muted, error, link, goOnline, callPeer, answer, hangUp, toggleMute }
 }
