@@ -100,13 +100,39 @@ def next_clip_id() -> str:
     return f"k_{(row[0] or 0) + 1}"
 
 
+def slug(text: str) -> str:
+    """'Balaji Keerthi' -> 'balaji-keerthi' (used for customer speaker ids)."""
+    return re.sub(r"[^a-z0-9]+", "-", (text or "").lower()).strip("-")
+
+
+def employee_number(text) -> str:
+    """'emp-4521', 'EMP-4521', ' 4521 ' -> '4521' (the UI sends whatever was typed)."""
+    t = str(text or "").strip()
+    return t[4:].strip() if t.lower().startswith("emp-") else t
+
+
+def agent_speaker_id(text) -> str:
+    """'4521' or 'emp-4521' -> 'emp-4521' (PLAN §3 speaker_id scheme)."""
+    return f"emp-{employee_number(text)}"
+
+
+def customer_key(text) -> str:
+    """'balaji', 'cust-balaji', 'Balaji' -> 'balaji' (the part after cust-)."""
+    t = slug(text)
+    return t[5:] if t.startswith("cust-") else t
+
+
+def canonical_customer(text) -> str:
+    """'balaji' or 'cust-balaji' -> 'cust-balaji'. Uses the enrolled speaker_id if we have one."""
+    t = str(text or "").strip()
+    row = db.conn.execute("SELECT speaker_id FROM people WHERE role = 'customer' AND "
+                          "(person_id = ? OR speaker_id = ?)", (t, t)).fetchone()
+    return row["speaker_id"] if row else f"cust-{customer_key(t)}"
+
+
 def customer_speaker_id(claimed_customer_id: str) -> str:
-    """Enrolled customer -> their speaker_id (e.g. cust-balaji); else use the id as given."""
-    row = db.conn.execute(
-        "SELECT speaker_id FROM people WHERE person_id = ? OR speaker_id = ?",
-        (claimed_customer_id, claimed_customer_id),
-    ).fetchone()
-    return row["speaker_id"] if row else claimed_customer_id
+    """Speaker id Eidos compares against for the claimed customer (e.g. cust-balaji)."""
+    return canonical_customer(claimed_customer_id)
 
 
 def save_evidence(call_id: str, kind: str, clip_sha256: str, outcome: dict, result_decision: str) -> None:
@@ -140,11 +166,6 @@ async def health():
 SPEAKER_ID = re.compile(r"^[A-Za-z0-9_.:-]{1,64}$")   # DetectifAI's allowed speaker_id format
 
 
-def slug(text: str) -> str:
-    """'Balaji Keerthi' -> 'balaji-keerthi' (used for customer speaker ids)."""
-    return re.sub(r"[^a-z0-9]+", "-", (text or "").lower()).strip("-")
-
-
 @app.post("/api/people/enroll")
 async def enroll_person(
     file: UploadFile = File(...),
@@ -160,9 +181,10 @@ async def enroll_person(
     if role == "agent":
         if not employee_id:
             raise HTTPException(400, "employee_id is required for an agent")
-        speaker_id = f"emp-{employee_id.strip()}"
+        employee_id = employee_number(employee_id)        # store '4521' even if 'emp-4521' was typed
+        speaker_id = agent_speaker_id(employee_id)
     else:
-        speaker_id = f"cust-{slug(person_id)}"
+        speaker_id = f"cust-{customer_key(person_id)}"
     if not SPEAKER_ID.match(speaker_id):
         raise HTTPException(400, f"invalid speaker id {speaker_id!r}: use letters, digits, _ . : -")
 
@@ -337,8 +359,8 @@ async def request_action(call_id: str, body: NewAction):
     # Say-It-Back needs: an enrolled customer (Eidos compares against them), credits above the
     # floor (v3 rule 7), and fewer than 2 failed attempts on this call (v3 rule 5 -> then fallback).
     customer = db.conn.execute(
-        "SELECT display_name FROM people WHERE role = 'customer' AND (person_id = ? OR speaker_id = ?)",
-        (call["claimed_customer_id"], call["claimed_customer_id"]),
+        "SELECT display_name FROM people WHERE role = 'customer' AND speaker_id = ?",
+        (canonical_customer(call["claimed_customer_id"]),),
     ).fetchone()
     balance = detectif.last_balance()
     above_floor = balance is None or balance >= config.CREDIT_FLOOR
@@ -457,21 +479,6 @@ async def say_it_back(call_id: str, file: UploadFile = File(...), attempt: int =
 # ---------- A7: Verify This Caller (customer side) ----------
 
 CALL_LOG_WINDOW_MIN = 30   # PLAN §3: outbound call started <= 30 min ago
-
-
-def employee_number(text) -> str:
-    """'emp-4521', 'EMP-4521', '4521' -> '4521' (the frontend sends whatever was typed)."""
-    t = str(text or "").strip()
-    return t[4:] if t.lower().startswith("emp-") else t
-
-
-def canonical_customer(text) -> str:
-    """'balaji' or 'cust-balaji' -> 'cust-balaji' (the speaker_id, via the people table if enrolled)."""
-    t = str(text or "").strip()
-    row = db.conn.execute("SELECT speaker_id FROM people WHERE person_id = ? OR speaker_id = ?", (t, t)).fetchone()
-    if row:
-        return row["speaker_id"]
-    return t if t.startswith("cust-") else f"cust-{slug(t)}"
 
 
 def find_call_log(employee_id: str, customer_id: str):
