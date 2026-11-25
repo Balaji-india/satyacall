@@ -25,10 +25,11 @@ async function request(path, options = {}) {
 const postJson = (path, data) =>
   request(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
 
-// POST multipart form: audio goes in field "file" as clip.webm, plus extra text fields.
-function postAudio(path, blob, fields = {}) {
+// POST multipart form: audio goes in field "file", plus extra text fields.
+// filename matters: the backend picks the audio type from its extension (.webm, .wav, .m4a, .mp3…).
+function postAudio(path, blob, fields = {}, filename = 'clip.webm') {
   const form = new FormData()
-  form.append('file', blob, 'clip.webm')
+  form.append('file', blob, filename)
   for (const [key, value] of Object.entries(fields)) {
     if (value !== undefined && value !== null) form.append(key, String(value))
   }
@@ -41,8 +42,20 @@ export function errorText(err) {
   if (!err?.status) return `network error — ${err?.message ?? err}`
   const body = err.body
   const msg = typeof body === 'string' ? body : body?.detail ?? body?.message ?? body?.error ?? body
-  return `HTTP ${err.status}: ${typeof msg === 'string' ? msg : JSON.stringify(msg)}`
+  return `HTTP ${err.status}: ${detailText(msg)}`
 }
+
+// body.detail can be a string, { code, message } (DetectifAI error passed through by the
+// backend) or FastAPI's validation list [{ loc, msg }]. Always return readable text.
+function detailText(d) {
+  if (typeof d === 'string') return d
+  if (Array.isArray(d)) return d.map((x) => (x?.msg ? `${x.loc?.at(-1) ?? ''} ${x.msg}`.trim() : JSON.stringify(x))).join('; ')
+  if (d && typeof d === 'object') return d.message ? `${d.message}${d.code ? ` (${d.code})` : ''}` : d.code ?? JSON.stringify(d)
+  return String(d)
+}
+
+// Stable error code from the backend / DetectifAI, e.g. "insufficient_speech", or null.
+export const errorCode = (err) => err?.body?.detail?.code ?? err?.body?.error?.code ?? null
 
 // A check's `error` field ({ code, message } from the backend, or a plain string) → one line.
 // Never render the object itself (that shows "[object Object]").
@@ -66,7 +79,9 @@ export function getHealth() {
 
 // POST /api/people/enroll — formFields: { person_id, display_name, role, phone? | employee_id?, department? }
 // → { person_id, speaker_id, samples, speech_seconds }
-export const enrollPerson = (formFields, fileBlob) => postAudio('/api/people/enroll', fileBlob, formFields)
+// filename: e.g. "sample.wav" for a chosen file (default: our own webm recording)
+export const enrollPerson = (formFields, fileBlob, filename = 'enroll.webm') =>
+  postAudio('/api/people/enroll', fileBlob, formFields, filename)
 
 // GET /api/people → [ { person_id, speaker_id, display_name, role, ... samples } ]
 export const listPeople = () => request('/api/people')

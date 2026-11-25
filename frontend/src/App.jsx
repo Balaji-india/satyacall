@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import Header from './components/Header'
 import AgentPage from './pages/AgentPage'
 import CallPage from './pages/CallPage'
+import EnrollPage from './pages/EnrollPage'
 import Placeholder from './pages/Placeholder'
 
 export default function App() {
@@ -18,10 +19,7 @@ export default function App() {
             <Placeholder title="Bank app — Verify This Caller" task="B6"
               description="Customer checks whether a caller claiming to be from the bank is real." />
           } />
-          <Route path="/enroll" element={
-            <Placeholder title="Enroll a voice" task="B5"
-              description="Record a 20–30 s sample to enroll a customer or agent." />
-          } />
+          <Route path="/enroll" element={<EnrollPage />} />
           <Route path="*" element={<Placeholder title="Page not found" task="—" description="Use the nav bar above." />} />
         </Routes>
       </main>
