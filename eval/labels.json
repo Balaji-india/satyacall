@@ -1,0 +1,8 @@
+{
+  "_how": "Ground truth, written by us. For each call: who ACTUALLY spoke as the customer (customer_voice) and, for Verify This Caller, as the agent (agent_voice). Values: balaji | aravindh | clone. null = not labelled yet (not scored). exclude=true = not a real test.",
+  "c_2":  {"customer_voice": null, "note": "CP1 test call - who spoke?"},
+  "c_4":  {"exclude": true, "note": "backend self-test with synthetic Windows text-to-speech, not a person"},
+  "c_8":  {"customer_voice": null, "note": "rehearsal scene 2 (add payee) - Balaji?"},
+  "c_9":  {"customer_voice": null, "note": "rehearsal - who spoke?"},
+  "c_10": {"customer_voice": null, "note": "rehearsal scene 3 (impostor) - Aravindh claiming to be Balaji?"}
+}
