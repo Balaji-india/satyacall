@@ -1,0 +1,5 @@
+# never commit secrets, the local database or the virtualenv
+.env
+.venv/
+*.db
+__pycache__/

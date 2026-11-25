@@ -1,0 +1,3 @@
+# Only needed from A6 (Say-It-Back speech-to-text). Large download, so installed separately:
+#   pip install -r requirements-stt.txt
+faster-whisper
