@@ -7,8 +7,8 @@ export default function PeopleList({ people, error, onRefresh }) {
   return (
     <section className="space-y-3 border-t border-line pt-5">
       <div className="flex items-center gap-3">
-        <h2 className="flex items-center gap-2 text-lg font-bold"><Users aria-hidden="true" className="h-5 w-5 text-tide" />Enrolled people</h2>
-        <button onClick={onRefresh} disabled={loading} className="btn-ghost px-3 py-1.5 text-[15px]">
+        <h2 className="flex items-center gap-2 text-lg font-bold"><Users aria-hidden="true" className="h-5 w-5 text-accent" />Enrolled people</h2>
+        <button onClick={onRefresh} disabled={loading} className="btn-ghost px-3 py-1.5 text-base">
           <RotateCw aria-hidden="true" className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           {loading ? 'Loading…' : 'Refresh'}
         </button>
@@ -24,7 +24,7 @@ export default function PeopleList({ people, error, onRefresh }) {
 
       {people?.length > 0 && (
         <div className="overflow-x-auto rounded-xl border border-line">
-          <table className="w-full text-left text-[15px]">
+          <table className="w-full text-left text-base">
             <thead className="bg-inset text-muted">
               <tr><th className="px-3 py-2 font-medium">Name</th><th className="px-3 font-medium">speaker_id</th><th className="px-3 font-medium">Role</th><th className="px-3 font-medium">Phone / employee</th><th className="px-3 font-medium">Samples</th></tr>
             </thead>

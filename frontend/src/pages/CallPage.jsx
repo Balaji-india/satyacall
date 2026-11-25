@@ -25,7 +25,7 @@ export default function CallPage() {
   return (
     <section className="space-y-4">
       <div>
-        <h1 className="text-[26px] font-bold leading-tight text-navy">{firstName ? `Hi ${firstName}` : 'Call your bank'}</h1>
+        <h1 className="text-[26px] font-bold leading-tight text-fg">{firstName ? `Hi ${firstName}` : 'Call your bank'}</h1>
         <p className="text-base text-muted">Talk to SatyaBank customer care.</p>
       </div>
 
@@ -36,7 +36,7 @@ export default function CallPage() {
             <label className="label block" htmlFor="cid">Your customer ID</label>
             <input id="cid" value={customerId} onChange={(e) => setCustomerId(e.target.value)} disabled={connecting}
               placeholder="e.g. C001" className="field font-mono text-lg" />
-            <p className="text-[15px] text-muted">Go online first — then you can call the bank, and the bank can call you.</p>
+            <p className="text-base text-muted">Go online first — then you can call the bank, and the bank can call you.</p>
             <button disabled={!customerId.trim() || connecting} className={`${BIG} btn-primary`}>
               <Wifi aria-hidden="true" className="h-5 w-5" />
               {connecting ? 'Going online…' : 'Go online'}
@@ -47,7 +47,7 @@ export default function CallPage() {
         {online && (
           <button onClick={() => call.callPeer(AGENT_PEER_ID)}
             disabled={call.status === 'ringing' || call.status === 'in-call'}
-            className={`${BIG} inline-flex items-center justify-center gap-2 bg-pass text-white transition-opacity disabled:opacity-60`}>
+            className={`${BIG} btn-go disabled:opacity-60`}>
             <PhoneCall aria-hidden="true" className="h-5 w-5" />
             {callLabel}
           </button>

@@ -13,7 +13,7 @@ export default function ClipList({ rows }) {
     return <p className="text-base text-muted">No clips yet — the first result arrives about 10 s after monitoring starts.</p>
   }
   return (
-    <ul className="divide-y divide-line text-[15px]">
+    <ul className="divide-y divide-line text-base">
       {rows.map((row) => (
         <li key={row.key} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-1 py-2">
           {row.result ? <ResultRow row={row} /> : <UploadRow row={row} />}
@@ -38,7 +38,7 @@ function ResultRow({ row }) {
       ) : (
         <>
           <span className="font-semibold">{a.verdict}</span>
-          <span className="text-muted">score <span className="font-mono text-white">{a.score}</span> vs threshold <span className="font-mono text-white">{a.threshold}</span> (higher = more likely AI)</span>
+          <span className="text-muted">score <span className="font-mono text-fg">{a.score}</span> vs threshold <span className="font-mono text-fg">{a.threshold}</span> (higher = more likely AI)</span>
         </>
       )}
       <Pill tone={IDENTITY_TONE[r.identity] ?? 'skip'} className="px-2 py-0.5 text-sm">identity: {r.identity}</Pill>

@@ -124,7 +124,7 @@ export default function EnrollPage({ signup }) {
         </div>
       ) : (
         <div className="space-y-1">
-          <h1 className="flex items-center gap-2 text-2xl font-bold"><UserPlus aria-hidden="true" className="h-6 w-6 text-tide" />Enroll a voice</h1>
+          <h1 className="flex items-center gap-2 text-2xl font-bold"><UserPlus aria-hidden="true" className="h-6 w-6 text-accent" />Enroll a voice</h1>
           <p className="text-base text-muted">Register a customer's or agent's voice with DetectifAI Eidos.</p>
         </div>
       )}
@@ -142,8 +142,8 @@ export default function EnrollPage({ signup }) {
           </label>
           <div className="flex gap-2" hidden={!!signup} role="radiogroup" aria-label="Role">
             {['customer', 'agent'].map((r) => (
-              <label key={r} className={`flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2.5 font-semibold capitalize ${form.role === r ? 'border-stamp bg-stamp/15' : 'border-line'}`}>
-                <input type="radio" name="role" value={r} checked={form.role === r} onChange={set('role')} className="accent-[#4f46e5]" /> {r}
+              <label key={r} className={`flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2.5 font-semibold capitalize ${form.role === r ? 'border-gold/70 bg-ocean/20' : 'border-line'}`}>
+                <input type="radio" name="role" value={r} checked={form.role === r} onChange={set('role')} className="accent-[#0284c7]" /> {r}
               </label>
             ))}
           </div>
@@ -176,7 +176,7 @@ export default function EnrollPage({ signup }) {
                 {mic.starting ? 'Opening microphone…' : audio ? 'Record again' : `Record ${RECORD_SECONDS} s`}
               </button>
             ) : (
-              <button type="button" onClick={mic.stop} className="inline-flex items-center gap-2 rounded-xl bg-stop px-4 py-2.5 font-semibold text-white">
+              <button type="button" onClick={mic.stop} className="btn-danger px-4 py-2.5">
                 <Square aria-hidden="true" className="h-4 w-4" />Stop early
               </button>
             )}
@@ -187,7 +187,7 @@ export default function EnrollPage({ signup }) {
           </div>
 
           {mic.recording && (
-            <p className={`rec-ring rounded-xl p-3 text-center font-semibold text-white ${mic.elapsed < MIN_SECONDS ? 'bg-[#b45309]' : 'bg-pass'}`}>
+            <p className={`rec-ring rounded-xl p-3 text-center font-semibold text-ink ${mic.elapsed < MIN_SECONDS ? 'bg-warn' : 'bg-pass'}`}>
               ● Recording… <span className="font-mono">{RECORD_SECONDS - mic.elapsed} s</span> left
               {mic.elapsed < MIN_SECONDS && ` (stopping now gives only ${mic.elapsed} s — under ${MIN_SECONDS} s)`}
             </p>
@@ -211,7 +211,7 @@ export default function EnrollPage({ signup }) {
             <Fingerprint aria-hidden="true" className="h-5 w-5" />
             {submitting ? 'Enrolling…' : 'Enroll voice (uses ~200 credits)'}
           </button>
-          {missing && <p className="text-[15px] text-muted">Fill in name, person_id and {isAgent ? 'employee ID + department' : 'phone'}.</p>}
+          {missing && <p className="text-base text-muted">Fill in name, person_id and {isAgent ? 'employee ID + department' : 'phone'}.</p>}
 
           {error && (
             <Reveal className="space-y-1 rounded-xl border border-stop/40 bg-stop/10 p-3 text-stop-fg">
@@ -222,16 +222,16 @@ export default function EnrollPage({ signup }) {
           {result && (
             <Reveal className="space-y-1 rounded-xl border border-pass/50 bg-pass/10 p-3">
               <p className="flex items-center gap-2 font-semibold text-pass-fg"><CheckCircle2 aria-hidden="true" className="h-5 w-5" />Enrolled {result.person_id}</p>
-              <p className="font-mono text-[15px]">speaker_id {result.speaker_id} · samples {result.samples ?? '—'} · speech {result.speech_seconds ?? '—'} s</p>
+              <p className="font-mono text-base">speaker_id {result.speaker_id} · samples {result.samples ?? '—'} · speech {result.speech_seconds ?? '—'} s</p>
               {signup
-                ? <p><Link to={LOGIN_PATH[signup]} className="font-semibold text-stamp underline underline-offset-2 [.theme-dark_&]:text-tide">Account created — sign in now</Link></p>
+                ? <p><Link to={LOGIN_PATH[signup]} className="link">Account created — sign in now</Link></p>
                 : <p className="text-muted">Next step: test it on a call. Add a second sample only if credits allow.</p>}
             </Reveal>
           )}
         </div>
       </form>
 
-      <p className="flex items-start gap-2 rounded-xl border border-line bg-inset p-3 text-[15px] text-muted">
+      <p className="flex items-start gap-2 rounded-xl border border-line bg-inset p-3 text-base text-muted">
         <Info aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
         Each sample costs 200 credits. Add a second sample (recorded over a call or on another device) only if credits allow.
       </p>

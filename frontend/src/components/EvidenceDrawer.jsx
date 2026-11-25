@@ -14,7 +14,7 @@ export default function EvidenceDrawer({ m }) {
     return (
       <section className="card flex items-center gap-3 p-4 opacity-80">
         <FolderSearch aria-hidden="true" className="h-5 w-5 text-muted" />
-        <span className="font-semibold text-white">Evidence</span>
+        <span className="font-semibold text-fg">Evidence</span>
         <span className="text-base text-muted">Every clip result and Say-It-Back attempt of a monitored call appears here, with its raw JSON.</span>
       </section>
     )
@@ -33,11 +33,11 @@ export default function EvidenceDrawer({ m }) {
   return (
     <section className="card overflow-hidden">
       <div className="flex flex-wrap items-center gap-3 p-4">
-        <button onClick={() => setOpen(!open)} aria-expanded={open} className="inline-flex items-center gap-2 text-lg font-semibold text-white">
+        <button onClick={() => setOpen(!open)} aria-expanded={open} className="inline-flex items-center gap-2 text-lg font-semibold text-fg">
           <ChevronDown aria-hidden="true" className={`h-5 w-5 transition-transform ${open ? '' : '-rotate-90'}`} />
           Evidence <span className="font-mono text-base font-normal text-muted">({checks.length} checks)</span>
         </button>
-        <a href={evidenceUrl(m.callId)} target="_blank" rel="noreferrer" className="btn-ghost ml-auto px-3 py-2 text-[15px]">
+        <a href={evidenceUrl(m.callId)} target="_blank" rel="noreferrer" className="btn-ghost ml-auto px-3 py-2 text-base">
           <FileJson aria-hidden="true" className="h-4 w-4" />Export evidence (JSON)
         </a>
       </div>
@@ -45,11 +45,11 @@ export default function EvidenceDrawer({ m }) {
       <AnimatePresence initial={false}>
         {open && (
           <motion.ul initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: 'easeOut' }} className="divide-y divide-line border-t border-line text-[15px]">
+            transition={{ duration: 0.25, ease: 'easeOut' }} className="divide-y divide-line border-t border-line text-base">
             {checks.length === 0 && <li className="p-4 text-muted">No checks yet — each 10 s clip result and each Say-It-Back attempt appears here.</li>}
             {checks.map((c) => (
               <li key={c.key} className="space-y-2 p-4">
-                <p className="font-semibold text-white">{c.title}</p>
+                <p className="font-semibold text-fg">{c.title}</p>
                 <div className="flex flex-wrap gap-4">
                   <Feedback label="Aletheia (voice authenticity)" operationId={c.data.authenticity?.operation_id} />
                   {/* Eidos only when it really ran (match / no_match) */}
@@ -58,8 +58,8 @@ export default function EvidenceDrawer({ m }) {
                   )}
                 </div>
                 <details>
-                  <summary className="cursor-pointer text-muted hover:text-white">Raw JSON</summary>
-                  <pre className="mt-2 max-h-72 overflow-auto rounded-lg border border-line bg-navy p-3 font-mono text-sm text-slate-300">
+                  <summary className="cursor-pointer text-muted hover:text-fg">Raw JSON</summary>
+                  <pre className="mt-2 max-h-72 overflow-auto rounded-lg border border-line bg-ink p-3 font-mono text-sm text-fg/85">
                     {JSON.stringify(c.data, null, 2)}
                   </pre>
                 </details>

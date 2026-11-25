@@ -1,75 +1,126 @@
-// / — pick what this laptop plays in the demo: the customer's phone or the bank's agent desk.
-// Hero: the product name and the two questions it answers. Each tile previews its device's look
-// (light phone app vs dark console) and carries the question that device answers. No data here.
+// / — landing + pick what this laptop plays in the demo: the customer's phone or the bank's
+// agent desk. Light-blue page; below the hero the two devices sit on their own side of a soft
+// wave: light blue (customer) on the left, deep ocean (agent desk) on the right, the 3D orb
+// over the wave. Each device card tilts toward the pointer (off for reduced motion). No data here.
 import { Link } from 'react-router-dom'
-import { motion } from 'motion/react'
-import { ArrowRight, MonitorSmartphone, Smartphone } from 'lucide-react'
+import { motion, useReducedMotion, useSpring } from 'motion/react'
+import { ArrowRight, AudioLines, Headset, MessageSquareQuote, ShieldCheck, Smartphone } from 'lucide-react'
 import { LogoMark } from '../components/Icons'
+import ReduceEffectsToggle from '../components/ReduceEffectsToggle'
+import VoiceOrb from '../components/VoiceOrb'
 
 const rise = (delay) => ({
-  initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.35, delay, ease: 'easeOut' },
+  initial: { opacity: 0, y: 14 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.4, delay, ease: 'easeOut' },
 })
+
+const FEATURES = [
+  [AudioLines, 'Live AI-voice check'],
+  [MessageSquareQuote, 'Say-It-Back'],
+  [ShieldCheck, 'Verify This Caller'],
+]
+
+// The wave between the two halves (viewBox 1000 × 600, stretched to the section).
+const WAVE = 'M560 0 C470 120 610 210 515 300 C420 390 570 480 470 600'
 
 export default function DeviceChooser() {
   return (
-    <div className="theme-dark desk-bg min-h-screen">
-      <main className="mx-auto flex min-h-screen max-w-6xl flex-col justify-center gap-12 px-6 py-12">
-        <motion.header {...rise(0)} className="space-y-6">
-          <div className="flex items-center gap-3">
-            <LogoMark className="h-12 w-12" />
-            <h1 className="font-display text-5xl font-extrabold tracking-tight text-white sm:text-6xl">SatyaCall</h1>
+    <div className="theme-phone sky-bg min-h-screen overflow-x-hidden">
+      <header className="mx-auto flex max-w-7xl items-center gap-3 px-6 py-5 sm:px-10">
+        <LogoMark className="h-10 w-10" />
+        <span className="font-display text-xl font-bold tracking-tight text-fg">SatyaCall</span>
+        <div className="ml-auto"><ReduceEffectsToggle /></div>
+      </header>
+
+      <main>
+        <motion.section {...rise(0)} className="mx-auto max-w-3xl space-y-5 px-6 pt-6 text-center">
+          <h1 className="text-wordmark pb-1 font-display text-6xl font-extrabold leading-none tracking-[-0.03em] sm:text-8xl">SatyaCall</h1>
+          <p className="font-display text-3xl font-semibold leading-tight text-fg sm:text-4xl">
+            Is it really them? Is it really the bank?
+          </p>
+          <p className="text-xl">A two-way voice trust layer for bank calls.</p>
+          <ul className="flex flex-wrap justify-center gap-2.5 pt-1">
+            {FEATURES.map(([Icon, label]) => (
+              <li key={label} className="inline-flex items-center gap-2 rounded-full border border-sea/30 bg-sea-tint px-4 py-2 text-base font-semibold text-fg">
+                <Icon aria-hidden="true" className="h-4 w-4 text-accent" />{label}
+              </li>
+            ))}
+          </ul>
+        </motion.section>
+
+        <section aria-labelledby="pick" className="relative mt-10">
+          <h2 id="pick" className="sr-only">Which device is this?</h2>
+          {/* Light-blue half, deep-ocean half, soft wave with a gold edge (wide screens). */}
+          <div aria-hidden="true" className="absolute inset-0 hidden bg-sky-2/70 md:block">
+            <svg className="absolute inset-0 h-full w-full" viewBox="0 0 1000 600" preserveAspectRatio="none">
+              <path d={`${WAVE} L1000 600 L1000 0 Z`} fill="#071a24" />
+              <path d={WAVE} fill="none" stroke="#d4af6a" strokeOpacity="0.7" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+            </svg>
           </div>
-          <p className="max-w-4xl font-display text-3xl font-bold leading-tight text-white sm:text-5xl">
-            Is it really them?<br />
-            <span className="text-[#aebbd0]">Is it really the bank?</span>
-          </p>
-          <p className="max-w-2xl text-lg text-muted">
-            A voice trust layer for bank calls: the bank checks the customer's voice is real and theirs, and the
-            customer checks the caller is really from the bank.
-          </p>
-        </motion.header>
 
-        <section aria-labelledby="pick" className="space-y-4">
-          <h2 id="pick" className="text-xl font-semibold text-white">Which device is this?</h2>
-          <div className="grid gap-6 md:grid-cols-2">
-            {/* Customer phone tile — previews the light SatyaBank app. */}
-            <motion.div {...rise(0.08)}>
-              <Link to="/customer/login"
-                className="theme-light group flex h-full flex-col gap-4 rounded-2xl border border-white/10 bg-mist p-7 text-navy transition-transform hover:-translate-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="grid h-14 w-14 place-items-center rounded-2xl bg-stamp text-white"><Smartphone aria-hidden="true" className="h-7 w-7" /></span>
-                  <span className="rounded-full bg-white px-3 py-1 text-[15px] font-semibold text-stamp shadow-sm">SatyaBank app</span>
-                </div>
-                <span className="font-display text-3xl font-bold">Customer phone</span>
-                <span className="text-lg text-muted">Call the bank, or check that someone calling you really is from the bank.</span>
-                <span className="mt-auto flex items-center justify-between border-t border-line pt-4 font-semibold">
-                  <span className="text-lg">“Is it really the bank?”</span>
-                  <ArrowRight aria-hidden="true" className="h-5 w-5 text-stamp transition-transform group-hover:translate-x-1" />
-                </span>
-              </Link>
+          <div className="relative mx-auto grid max-w-7xl items-center gap-8 px-6 py-12 sm:px-10 md:grid-cols-[1fr_minmax(240px,360px)_1fr] md:py-16">
+            <motion.div {...rise(0.1)} className="order-2 md:order-1">
+              <DeviceCard to="/customer/login" Icon={Smartphone} title="Customer phone" tag="SatyaBank app"
+                text="Call the bank, or check that someone calling you really is from the bank."
+                question="Is it really the bank?" />
             </motion.div>
-
-            {/* Agent desk tile — previews the dark console. */}
-            <motion.div {...rise(0.14)}>
-              <Link to="/agent/login"
-                className="group flex h-full flex-col gap-4 rounded-2xl border border-tide/30 bg-panel p-7 text-white transition-transform hover:-translate-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="grid h-14 w-14 place-items-center rounded-2xl bg-tide/15 text-tide"><MonitorSmartphone aria-hidden="true" className="h-7 w-7" /></span>
-                  <span className="rounded-full border border-tide/40 px-3 py-1 text-[15px] font-semibold text-tide">Security console</span>
-                </div>
-                <span className="font-display text-3xl font-bold">Bank agent desk</span>
-                <span className="text-lg text-muted">Take customer calls and see, clip by clip, whether the voice can be trusted.</span>
-                <span className="mt-auto flex items-center justify-between border-t border-white/10 pt-4 font-semibold">
-                  <span className="text-lg">“Is it really them?”</span>
-                  <ArrowRight aria-hidden="true" className="h-5 w-5 text-tide transition-transform group-hover:translate-x-1" />
-                </span>
-              </Link>
+            <motion.div initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.4, ease: 'easeOut' }}
+              className="order-1 mx-auto w-full max-w-[280px] md:order-2 md:max-w-none">
+              <VoiceOrb shadow className="w-full md:scale-125" />
+            </motion.div>
+            <motion.div {...rise(0.16)} className="theme-dark order-3">
+              <DeviceCard to="/agent/login" Icon={Headset} title="Bank agent desk" tag="Agent console"
+                text="Take customer calls and see, clip by clip, whether the voice can be trusted."
+                question="Is it really them?" />
             </motion.div>
           </div>
         </section>
 
-        <footer className="text-base text-muted">Signals, not proof — a person reviews decisions that matter.</footer>
+        <footer className="px-6 py-8 text-center text-base">Signals, not proof — a person reviews decisions that matter.</footer>
       </main>
+    </div>
+  )
+}
+
+// A device card that tilts toward the pointer (CSS perspective + motion springs) with a gold
+// sheen under the cursor. Reduced motion → no tilt, the gold border glow on hover stays.
+function DeviceCard({ to, Icon, title, tag, text, question }) {
+  const reduce = useReducedMotion()
+  const rotateX = useSpring(0, { stiffness: 160, damping: 18 })
+  const rotateY = useSpring(0, { stiffness: 160, damping: 18 })
+
+  const onMove = (e) => {
+    const box = e.currentTarget.getBoundingClientRect()
+    const x = (e.clientX - box.left) / box.width
+    const y = (e.clientY - box.top) / box.height
+    e.currentTarget.style.setProperty('--mx', `${x * 100}%`)
+    e.currentTarget.style.setProperty('--my', `${y * 100}%`)
+    if (reduce) return
+    rotateY.set((x - 0.5) * 10)
+    rotateX.set((0.5 - y) * 10)
+  }
+  const onLeave = () => { rotateX.set(0); rotateY.set(0) }
+
+  return (
+    <div className="h-full [perspective:1000px]">
+      <motion.div style={{ rotateX, rotateY }} className="h-full">
+        <Link to={to} onPointerMove={onMove} onPointerLeave={onLeave}
+          className="device-card group flex h-full flex-col gap-4 p-7">
+          <div className="flex items-center justify-between">
+            <span className="grid h-14 w-14 place-items-center rounded-2xl bg-[linear-gradient(145deg,#0284c7,#0b2533)] text-white ring-1 ring-gold/70 shadow-[0_10px_22px_-10px_rgb(2_132_199/0.8)]">
+              <Icon aria-hidden="true" className="h-7 w-7" />
+            </span>
+            <span className="rounded-full border border-sea/40 bg-sea/10 px-3 py-1 text-base font-medium text-fg">{tag}</span>
+          </div>
+          <span className="font-display text-3xl font-bold tracking-tight text-fg">{title}</span>
+          <span className="text-lg text-muted">{text}</span>
+          <span className="mt-auto flex items-center justify-between gap-4 border-t border-line pt-5">
+            <span className="font-display text-xl font-semibold text-fg">“{question}”</span>
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-gold/60 text-accent transition-colors group-hover:bg-gold group-hover:text-ink">
+              <ArrowRight aria-hidden="true" className="h-5 w-5" />
+            </span>
+          </span>
+        </Link>
+      </motion.div>
     </div>
   )
 }

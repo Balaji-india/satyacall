@@ -16,7 +16,7 @@ function statusText({ status, myId, otherId, incoming }) {
   }
 }
 
-const DOT = { offline: 'bg-skip', connecting: 'bg-warn ringing', online: 'bg-pass', ringing: 'bg-warn ringing', 'in-call': 'bg-pass live-dot', ended: 'bg-skip' }
+const DOT = { offline: 'bg-skip', connecting: 'bg-warn ringing', online: 'bg-sea', ringing: 'bg-warn ringing', 'in-call': 'bg-sea live-dot', ended: 'bg-skip' }
 
 // onHangUp (optional): what "Hang up" does. /agent passes one that also ends monitoring.
 export default function CallPanel({ call, onHangUp = call.hangUp, big = false, children }) {
@@ -29,7 +29,7 @@ export default function CallPanel({ call, onHangUp = call.hangUp, big = false, c
 
   const speakerToggle = (
     <button type="button" onClick={() => setSpeakerMuted((v) => !v)} aria-pressed={speakerMuted}
-      className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-[15px] font-semibold transition-colors ${speakerMuted ? 'border-warn/60 bg-warn/15 text-warn-fg' : 'border-line bg-inset'}`}>
+      className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-base font-semibold transition-colors ${speakerMuted ? 'border-warn/60 bg-warn/15 text-warn-fg' : 'border-line bg-inset'}`}>
       {speakerMuted ? <VolumeX aria-hidden="true" className="h-4 w-4" /> : <Volume2 aria-hidden="true" className="h-4 w-4" />}
       {speakerMuted ? 'Speaker muted — unmute' : 'Mute speaker (this window)'}
     </button>
@@ -42,15 +42,18 @@ export default function CallPanel({ call, onHangUp = call.hangUp, big = false, c
     return (
       <div className="space-y-5">
         {/* Call screen: who you're calling + live status. */}
-        <div className="card flex flex-col items-center gap-2.5 px-5 py-5 text-center">
-          <span className={`grid h-20 w-20 place-items-center rounded-full bg-gradient-to-br from-stamp to-[#3730a3] text-white shadow-[0_12px_30px_-10px_rgb(79_70_229/0.7)] ${call.status === 'ringing' ? 'rec-ring' : ''}`}>
-            <Landmark aria-hidden="true" className="h-9 w-9" strokeWidth={1.8} />
+        <div className="card flex flex-col items-center gap-3 bg-[image:radial-gradient(90%_60%_at_50%_0%,rgb(2_132_199/0.12),transparent_70%)] px-5 pb-6 pt-7 text-center">
+          {/* Avatar with a gold ring; the ring pulses gently while ringing or in a call. */}
+          <span className={`grid h-24 w-24 place-items-center rounded-full p-[3px] ${inCallOrRinging ? 'gold-pulse' : ''} bg-[conic-gradient(from_200deg,#d4af6a,#f3e2bd,#d4af6a,#b8914a,#d4af6a)]`}>
+            <span className="grid h-full w-full place-items-center rounded-full bg-[radial-gradient(circle_at_35%_30%,#38bdf8,#0284c7_45%,#0b2533)] text-white">
+              <Landmark aria-hidden="true" className="h-10 w-10" strokeWidth={1.6} />
+            </span>
           </span>
           <div>
-            <p className="font-display text-2xl font-bold text-navy">SatyaBank</p>
+            <p className="font-display text-2xl font-bold text-fg">SatyaBank</p>
             <p className="text-base text-muted">Customer care</p>
           </div>
-          <p className="inline-flex max-w-full items-center gap-2 rounded-full bg-inset px-3 py-1.5 text-[15px] font-medium">
+          <p className="inline-flex max-w-full items-center gap-2 rounded-full bg-inset px-3 py-1.5 text-base font-medium">
             <span className={`inline-block h-2.5 w-2.5 shrink-0 rounded-full ${DOT[call.status]}`} />
             <span className="break-all">{statusText(call)}</span>
           </p>
@@ -59,15 +62,15 @@ export default function CallPanel({ call, onHangUp = call.hangUp, big = false, c
           {/* Round call buttons with a label under each, like a phone's call screen. */}
           <div className="mt-2 flex items-start justify-center gap-8">
             {call.incoming && (
-              <RoundButton label="Answer" onClick={call.answer} className="bg-pass text-white">
+              <RoundButton label="Answer" onClick={call.answer} className="bg-[#15803d] text-white">
                 <Phone className="h-7 w-7" />
               </RoundButton>
             )}
             <RoundButton label={call.muted ? 'Unmute' : 'Mute'} onClick={call.toggleMute} disabled={noLine} pressed={call.muted}
-              className={call.muted ? 'bg-navy text-white' : 'border border-line bg-white text-navy'}>
+              className={call.muted ? 'bg-deep text-white' : 'border border-line bg-white text-fg shadow-sm'}>
               {call.muted ? <MicOff className="h-7 w-7" /> : <Mic className="h-7 w-7" />}
             </RoundButton>
-            <RoundButton label={call.incoming ? 'Decline' : 'Hang up'} onClick={hangUp} disabled={!inCallOrRinging} className="bg-stop text-white">
+            <RoundButton label={call.incoming ? 'Decline' : 'Hang up'} onClick={hangUp} disabled={!inCallOrRinging} className="bg-stop text-white shadow-[0_10px_24px_-10px_rgb(220_38_38/0.7)]">
               <PhoneOff className="h-7 w-7" />
             </RoundButton>
           </div>
@@ -78,7 +81,7 @@ export default function CallPanel({ call, onHangUp = call.hangUp, big = false, c
 
         <div className="space-y-2 text-center">
           {speakerToggle}
-          <p className="text-[15px] text-muted">Use earphones. Same laptop for both windows? Mute the speaker in one.</p>
+          <p className="text-base text-muted">Use earphones. Same laptop for both windows? Mute the speaker in one.</p>
         </div>
         <RemoteAudio stream={call.remoteStream} muted={speakerMuted} />
       </div>
@@ -96,7 +99,7 @@ export default function CallPanel({ call, onHangUp = call.hangUp, big = false, c
         {call.status === 'in-call' && call.link && <LinkBadge link={call.link} />}
         <div className="flex flex-wrap items-center gap-2">
         {call.incoming && (
-          <button onClick={call.answer} className="inline-flex items-center gap-2 rounded-xl bg-pass px-4 py-2.5 font-semibold text-white">
+          <button onClick={call.answer} className="btn-go px-4 py-2.5">
             <Phone aria-hidden="true" className="h-4 w-4" />Answer
           </button>
         )}
@@ -106,7 +109,7 @@ export default function CallPanel({ call, onHangUp = call.hangUp, big = false, c
           {call.muted ? 'Unmute' : 'Mute'}
         </button>
         <button onClick={hangUp} disabled={!inCallOrRinging}
-          className="inline-flex items-center gap-2 rounded-xl bg-stop px-4 py-2.5 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">
+          className="btn-danger px-4 py-2.5">
           <PhoneOff aria-hidden="true" className="h-4 w-4" />{call.incoming ? 'Decline' : 'Hang up'}
         </button>
           {speakerToggle}
@@ -121,8 +124,8 @@ export default function CallPanel({ call, onHangUp = call.hangUp, big = false, c
 function RoundButton({ label, onClick, disabled, pressed, className, children }) {
   return (
     <button type="button" onClick={onClick} disabled={disabled} aria-pressed={pressed}
-      className="group flex w-20 flex-col items-center gap-2 text-[15px] font-semibold text-navy disabled:cursor-not-allowed disabled:opacity-40">
-      <span aria-hidden="true" className={`grid h-16 w-16 place-items-center rounded-full shadow-sm transition-transform group-enabled:group-active:scale-95 ${className}`}>
+      className="group flex w-20 flex-col items-center gap-2 text-base font-semibold disabled:cursor-not-allowed disabled:opacity-40">
+      <span aria-hidden="true" className={`grid h-16 w-16 place-items-center rounded-full transition-transform group-enabled:group-active:scale-95 ${className}`}>
         {children}
       </span>
       {label}
@@ -138,7 +141,7 @@ function LinkBadge({ link }) {
   const rtt = link.rttMs == null ? 'measuring…' : `${link.rttMs} ms`
   const tone = kind === 'Relay' ? 'border-warn/50 bg-warn/12 text-warn-fg' : 'border-pass/45 bg-pass/10 text-pass-fg'
   return (
-    <p className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[15px] font-semibold ${tone}`}
+    <p className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-base font-semibold ${tone}`}
       title={`ICE candidates: ${link.local ?? '?'} → ${link.remote ?? '?'} · round trip from getStats`}>
       {kind} · <span className="font-mono">{rtt}</span>
     </p>

@@ -7,7 +7,7 @@ export default function ReduceEffectsToggle() {
   return (
     <button type="button" onClick={toggle} aria-pressed={on}
       title="Stops background animation so the call and recording run smoother"
-      className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-[15px] font-medium transition-colors ${on ? 'border-tide/60 bg-tide/15 text-white' : 'border-line text-muted hover:text-white'}`}>
+      className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-base font-medium transition-colors ${on ? 'border-gold/60 bg-gold/15 text-fg' : 'border-line text-muted hover:text-fg'}`}>
       <Sparkles aria-hidden="true" className="h-4 w-4" />
       {on ? 'Effects reduced' : 'Reduce effects'}
     </button>

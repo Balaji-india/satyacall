@@ -85,25 +85,25 @@ export default function TopBar({ call, m, onEnd }) {
                 <Radio aria-hidden="true" className="h-4 w-4" />
                 {m.phase === 'starting' ? 'Starting…' : 'Start monitoring'}
               </button>
-              <p className="basis-full text-[15px] text-muted">
-                {inCall ? <>This call is <b className="text-white">{direction}</b>{direction === 'outbound' && ' (writes the bank call log)'}.</>
+              <p className="basis-full text-base text-muted">
+                {inCall ? <>This call is <b className="text-fg">{direction}</b>{direction === 'outbound' && ' (writes the bank call log)'}.</>
                   : 'Connect a call first, then start monitoring.'}
               </p>
             </form>
           ) : (
             <div className="flex min-w-0 items-center gap-4">
-              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-stamp/20 text-[#a5b4fc]"><UserRound aria-hidden="true" className="h-6 w-6" /></span>
+              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-ocean/20 text-accent ring-1 ring-gold/40"><UserRound aria-hidden="true" className="h-6 w-6" /></span>
               <div className="min-w-0">
                 <p className="label">Claimed customer</p>
-                <p className="truncate font-display text-xl font-bold text-white">{startedName ?? (startedCustomerId || '—')}</p>
-                <p className="flex flex-wrap items-center gap-x-3 text-[15px] text-muted">
+                <p className="truncate font-display text-xl font-bold text-fg">{startedName ?? (startedCustomerId || '—')}</p>
+                <p className="flex flex-wrap items-center gap-x-3 text-base text-muted">
                   <span className="font-mono">call {m.callId}</span>
                   <span>{m.direction === 'outbound' ? 'outbound — logged' : m.direction}</span>
                 </p>
               </div>
               {live && (
-                <span className="inline-flex items-center gap-2 rounded-full border border-stop/60 bg-stop/15 px-3 py-1 text-[15px] font-bold tracking-wider text-stop-fg">
-                  <span className="live-dot inline-block h-2.5 w-2.5 rounded-full bg-stop" />LIVE
+                <span className="inline-flex items-center gap-2 rounded-full border border-sea/60 bg-sea/15 px-3 py-1 text-base font-bold tracking-wider text-[#5eead4]">
+                  <span className="live-dot inline-block h-2.5 w-2.5 rounded-full bg-sea" />LIVE
                 </span>
               )}
             </div>
@@ -115,7 +115,7 @@ export default function TopBar({ call, m, onEnd }) {
           {/* Credits: last balance the backend reported (DetectifAI's real number). */}
           <div className="flex flex-col gap-1.5 lg:items-end">
             <span className="label inline-flex items-center gap-1.5"><Coins aria-hidden="true" className="h-4 w-4" />DetectifAI credits</span>
-            <span className="font-mono text-3xl font-semibold leading-none text-white">{m.credits ?? '—'}</span>
+            <span className="font-mono text-3xl font-semibold leading-none text-accent">{m.credits ?? '—'}</span>
           </div>
         </div>
 
@@ -126,8 +126,7 @@ export default function TopBar({ call, m, onEnd }) {
               {m.paused ? <Play aria-hidden="true" className="h-4 w-4" /> : <Pause aria-hidden="true" className="h-4 w-4" />}
               {m.paused ? 'Resume monitoring' : 'Pause monitoring'}
             </button>
-            <button onClick={onEnd} disabled={!live}
-              className="inline-flex items-center gap-2 rounded-xl bg-stop px-4 py-2.5 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">
+            <button onClick={onEnd} disabled={!live} className="btn-danger px-4 py-2.5">
               <PhoneOff aria-hidden="true" className="h-4 w-4" />
               {m.phase === 'ending' ? 'Ending…' : 'End call'}
             </button>
@@ -135,7 +134,7 @@ export default function TopBar({ call, m, onEnd }) {
               <Download aria-hidden="true" className="h-4 w-4" />
               Download last clip{m.lastClip && <span className="font-mono font-normal"> ({m.lastClip.t_start}–{m.lastClip.t_end} s)</span>}
             </button>
-            <span className="ml-auto text-[15px] text-muted">
+            <span className="ml-auto text-base text-muted">
               {live && (m.holding ? 'timeline paused for Say-It-Back'
                 : m.paused ? 'paused — not recording (saves credits)'
                 : `recording ${CLIP_SECONDS} s clips of the customer`)}
@@ -148,17 +147,17 @@ export default function TopBar({ call, m, onEnd }) {
       </div>
 
       {peopleError && !m.callId && (
-        <p className="flex items-start gap-2 text-[15px] text-muted">
+        <p className="flex items-start gap-2 text-base text-muted">
           <AlertTriangle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-warn-fg" />
           <span className="min-w-0 break-words">Customer list unavailable ({peopleError}) — type the customer id instead.</span>
         </p>
       )}
 
       {m.callState === 'alert' && (
-        <Reveal className="flex gap-4 rounded-2xl border border-stop bg-stop/90 p-5 text-white shadow-[0_0_40px_-10px_rgb(220_38_38/0.9)]">
-          <AlertTriangle aria-hidden="true" className="h-9 w-9 shrink-0" />
+        <Reveal className="verdict verdict-stop flex gap-4 p-5">
+          <AlertTriangle aria-hidden="true" className="h-9 w-9 shrink-0 text-stop-fg" />
           <div className="space-y-1">
-            <p className="font-display text-xl font-bold">ALERT: Possible handover / voice change</p>
+            <p className="font-display text-xl font-bold text-stop-fg">ALERT: Possible handover / voice change</p>
             {m.stateReason && <p className="text-base">Evidence: {m.stateReason}</p>}
             <p className="text-base">
               Next step: every request now needs Say-It-Back. If it fails, do not proceed — use the bank's
@@ -171,10 +170,10 @@ export default function TopBar({ call, m, onEnd }) {
       {/* Identity = Eidos said this is NOT the claimed customer's voice. Name comes from
           GET /api/people; if the list did not load we show the id instead (never a made-up name). */}
       {m.callId && m.identity === 'no_match' && (
-        <Reveal className="flex gap-4 rounded-2xl border border-stop bg-stop/90 p-5 text-white shadow-[0_0_40px_-10px_rgb(220_38_38/0.9)]">
-          <AlertTriangle aria-hidden="true" className="h-9 w-9 shrink-0" />
+        <Reveal className="verdict verdict-stop flex gap-4 p-5">
+          <AlertTriangle aria-hidden="true" className="h-9 w-9 shrink-0 text-stop-fg" />
           <div className="space-y-1">
-            <p className="font-display text-xl font-bold">
+            <p className="font-display text-xl font-bold text-stop-fg">
               Caller's voice does not match {startedName ?? startedCustomerId}. Do not proceed with high-risk requests.
             </p>
             <p className="text-base">

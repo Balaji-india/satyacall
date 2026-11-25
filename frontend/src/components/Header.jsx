@@ -26,15 +26,15 @@ export default function Header() {
   useEffect(() => { loadHealth() }, [])
   const checkHealth = () => { setHealth(null); loadHealth() }
 
-  const link = 'inline-flex items-center gap-2 rounded-lg px-3 py-2 text-base font-medium text-muted hover:bg-white/5 hover:text-white'
+  const link = 'inline-flex items-center gap-2 rounded-lg px-3 py-2 text-base font-medium text-muted hover:bg-gold/5 hover:text-fg'
 
   return (
-    <header className="sticky top-0 z-30 border-b border-white/10 bg-navy/90 backdrop-blur">
+    <header className="sticky top-0 z-30 border-b border-line bg-ink/90 backdrop-blur">
       <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6">
         <Link to="/agent" className="flex items-center gap-3">
           <LogoMark className="h-9 w-9" />
-          <span className="font-display text-xl font-extrabold tracking-tight text-white">SatyaBank</span>
-          <span className="rounded-md border border-tide/50 bg-tide/10 px-2 py-0.5 text-[15px] font-semibold text-tide">Agent desk</span>
+          <span className="font-display text-xl font-extrabold tracking-tight text-fg">SatyaBank</span>
+          <span className="rounded-md border border-gold/50 bg-gold/10 px-2 py-0.5 text-base font-semibold text-accent">Agent desk</span>
         </Link>
 
         {/* The only link: enrolment is an admin task, so it stays small. */}
@@ -48,7 +48,7 @@ export default function Header() {
           {/* Demo staff sign-in (B10): who is at this desk + Sign out. */}
           {session?.role === 'agent' && (
             <>
-              <span className="inline-flex items-center gap-2 px-2 text-base text-white">
+              <span className="inline-flex items-center gap-2 px-2 text-base text-fg">
                 <UserRound aria-hidden="true" className="h-4 w-4 text-muted" />
                 {session.display_name}
                 <span className="font-mono text-muted">{session.employee_id}</span>
@@ -64,7 +64,7 @@ export default function Header() {
 
 // Only shows what the backend actually returned — no default numbers. Click = re-check.
 function HealthChip({ health, onRetry }) {
-  const base = 'inline-flex max-w-[28rem] items-center gap-2 rounded-lg border px-3 py-2 text-left text-[15px] font-semibold'
+  const base = 'inline-flex max-w-[28rem] items-center gap-2 rounded-lg border px-3 py-2 text-left text-base font-semibold'
   if (health === null) {
     return <span className={`${base} border-line text-muted`}><Server aria-hidden="true" className="h-4 w-4 ringing" />Backend: checking…</span>
   }
@@ -74,7 +74,7 @@ function HealthChip({ health, onRetry }) {
         className={`${base} border-stop/50 bg-stop/10 text-stop-fg hover:bg-stop/20`}>
         <ServerOff aria-hidden="true" className="h-4 w-4 shrink-0" />
         <span className="shrink-0">Backend unreachable</span>
-        <span className="font-normal text-white/80 underline underline-offset-2">Retry</span>
+        <span className="font-normal text-fg/80 underline underline-offset-2">Retry</span>
       </button>
     )
   }
@@ -85,7 +85,7 @@ function HealthChip({ health, onRetry }) {
       <Server aria-hidden="true" className="h-4 w-4 shrink-0" />
       Backend connected
       {detectif_reachable === false && <span> · DetectifAI unreachable</span>}
-      <span className="font-normal text-white/80">· credits <span className="font-mono">{credits_balance ?? 'unknown'}</span></span>
+      <span className="font-normal text-fg/80">· credits <span className="font-mono">{credits_balance ?? 'unknown'}</span></span>
     </button>
   )
 }

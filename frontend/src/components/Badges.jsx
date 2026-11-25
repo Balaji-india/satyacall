@@ -22,7 +22,7 @@ export function StateBadge({ state }) {
   return (
     <Labelled label="Call state" sub="voice authenticity"
       title="Call state = voice authenticity over the call (Aletheia: real human voice or AI-generated?)">
-      <Pill tone={STATE_TONE[state] ?? 'skip'} swapKey={state ?? 'none'} className={`text-lg tracking-wide ${state === 'alert' ? 'live-dot' : ''}`}>
+      <Pill tone={STATE_TONE[state] ?? 'skip'} swapKey={state ?? 'none'} className={`text-lg tracking-wide ${state === 'alert' ? 'rec-ring' : ''}`}>
         {state ? state.toUpperCase() : 'None yet'}
       </Pill>
     </Labelled>

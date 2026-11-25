@@ -108,8 +108,8 @@ export default function RequestPanel({ m, remoteStream }) {
 
   return (
     <section className="card min-w-0 space-y-4 p-5">
-      <h2 className="flex items-center gap-2 text-xl font-bold text-white">
-        <ClipboardList aria-hidden="true" className="h-5 w-5 text-tide" />Customer request
+      <h2 className="flex items-center gap-2 text-xl font-bold text-fg">
+        <ClipboardList aria-hidden="true" className="h-5 w-5 text-accent" />Customer request
       </h2>
 
       <form onSubmit={submit} className="space-y-3">
@@ -129,7 +129,7 @@ export default function RequestPanel({ m, remoteStream }) {
           <ShieldQuestion aria-hidden="true" className="h-5 w-5" />
           {sending ? 'Checking request…' : 'Check request'}
         </button>
-        {!live && <p className="text-[15px] text-muted">Start monitoring a call first — then requests are checked against the live call.</p>}
+        {!live && <p className="text-base text-muted">Start monitoring a call first — then requests are checked against the live call.</p>}
       </form>
 
       {error && (
@@ -140,9 +140,9 @@ export default function RequestPanel({ m, remoteStream }) {
 
       {action && (
         <div className="flex flex-wrap items-center gap-2 border-t border-line pt-4 text-base">
-          <span className="font-semibold text-white">{action.label}</span>
+          <span className="font-semibold text-fg">{action.label}</span>
           <Pill tone={riskTone} swapKey={`${action.label}-${action.response.risk}`}>{action.response.risk} risk</Pill>
-          <span className="text-muted">decision <span className="font-mono text-white">{decision}</span></span>
+          <span className="text-muted">decision <span className="font-mono text-fg">{decision}</span></span>
         </div>
       )}
 
@@ -154,7 +154,7 @@ export default function RequestPanel({ m, remoteStream }) {
           </p>
           <p className="text-base">
             Evidence: call state <b>{m.callState ?? 'none yet'}</b>, identity <b>{m.identity ?? 'none yet'}</b>
-            {latestClip && <> · latest clip: <span className="font-mono text-[15px]">{latestClip.status === 'skipped' ? 'skipped' : authenticityText(latestClip.authenticity)}</span></>}
+            {latestClip && <> · latest clip: <span className="font-mono text-base">{latestClip.status === 'skipped' ? 'skipped' : authenticityText(latestClip.authenticity)}</span></>}
           </p>
           <HowItDecided>
             The backend rated “{action.label}” {action.response.risk} risk and allowed it while the call state
@@ -167,11 +167,11 @@ export default function RequestPanel({ m, remoteStream }) {
       {/* say_it_back → the sentence big + record button(s) */}
       {decision === 'say_it_back' && (
         <Reveal className="quote-card space-y-3 p-5">
-          <p className="label flex items-center gap-2"><MessageSquareQuote aria-hidden="true" className="h-4 w-4 text-tide" />Ask the customer to say</p>
-          <p className="font-display text-2xl font-semibold leading-snug text-white">“{action.response.sentence ?? 'the backend sent no sentence'}”</p>
+          <p className="label flex items-center gap-2"><MessageSquareQuote aria-hidden="true" className="h-4 w-4 text-accent" />Ask the customer to say</p>
+          <p className="font-display text-2xl font-semibold leading-snug text-fg">“{action.response.sentence ?? 'the backend sent no sentence'}”</p>
 
           {rec && (
-            <p className={`flex items-center justify-center gap-2 rounded-xl p-3 text-center text-lg font-semibold text-white ${rec.phase === 'recording' ? 'rec-ring border-2 border-stop bg-stop/25' : 'bg-white/10'}`}>
+            <p className={`flex items-center justify-center gap-2 rounded-xl p-3 text-center text-lg font-semibold text-fg ${rec.phase === 'recording' ? 'rec-ring border-2 border-stop bg-stop/20' : 'bg-fg/10'}`}>
               {rec.phase === 'recording'
                 ? <><Mic aria-hidden="true" className="h-5 w-5" />Recording customer… <span className="font-mono">{rec.secondsLeft} s</span> (attempt {rec.attempt})</>
                 : <><Loader2 aria-hidden="true" className="h-5 w-5 animate-spin" />Checking attempt {rec.attempt} (speech-to-text + Eidos + Aletheia)…</>}
@@ -186,12 +186,12 @@ export default function RequestPanel({ m, remoteStream }) {
           {!rec && result?.next_step === 'retry' && !agentFallback && (
             <div className="flex flex-wrap gap-2">
               <button onClick={() => confirm(2)} disabled={!live}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-warn px-4 py-2.5 font-semibold text-navy disabled:opacity-40">
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-warn px-4 py-2.5 font-bold text-ink disabled:opacity-40">
                 <RotateCw aria-hidden="true" className="h-4 w-4" />Try again (attempt 2)
               </button>
               <button onClick={() => setAgentFallback(true)}
                 title="Skip attempt 2: no new recording, no more credits spent"
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-stop px-4 py-2.5 font-semibold text-white">
+                className="btn-danger flex-1 px-4 py-2.5">
                 <Ban aria-hidden="true" className="h-4 w-4" />Stop — use fallback
               </button>
             </div>
@@ -203,22 +203,22 @@ export default function RequestPanel({ m, remoteStream }) {
 
       {/* fallback (from the action decision, or after a failed Say-It-Back) */}
       {fallback && (
-        <Reveal className="space-y-3 rounded-2xl bg-stop p-4 text-white shadow-[0_0_36px_-10px_rgb(220_38_38/0.9)]">
-          <p className="flex items-center gap-2 font-display text-2xl font-bold"><XCircle aria-hidden="true" className="h-8 w-8 shrink-0" />Do not proceed</p>
+        <Reveal className="verdict verdict-stop space-y-3 p-4">
+          <p className="flex items-center gap-2 font-display text-2xl font-bold text-stop-fg"><XCircle aria-hidden="true" className="h-8 w-8 shrink-0" />Do not proceed</p>
           <p className="text-base">
             <span className="font-semibold">How it decided: </span>
             {agentFallback ? 'Fallback chosen by agent after attempt 1 (Say-It-Back details above)'
               : result ? 'Say-It-Back did not pass (details above)' : `backend decision "fallback" for ${action.label}`}
             {' '}· call state {m.callState ?? 'none yet'} · identity {m.identity ?? 'none yet'}
           </p>
-          <p className="rounded-xl bg-black/25 p-3 text-lg font-semibold">Next step: {FALLBACK_TEXT}</p>
+          <p className="rounded-xl bg-ink/50 p-3 text-lg font-semibold">Next step: {FALLBACK_TEXT}</p>
         </Reveal>
       )}
       {result?.next_step === 'approved' && (
-        <Reveal className="flex items-center gap-4 rounded-2xl bg-pass p-4 text-white shadow-[0_0_36px_-10px_rgb(22_163_74/0.9)]">
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white/20"><DrawCheck /></span>
+        <Reveal className="verdict verdict-pass flex items-center gap-4 p-4">
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-pass text-ink"><DrawCheck /></span>
           <div>
-            <p className="font-display text-2xl font-bold">Approved</p>
+            <p className="font-display text-2xl font-bold text-pass-fg">Approved</p>
             <p className="text-base">Next step: complete the customer's request.</p>
           </div>
         </Reveal>
@@ -236,7 +236,7 @@ function SayItBackCard({ r, n }) {
   return (
     <Reveal className={`space-y-3 rounded-2xl border bg-inset p-4 ${TONE[tone].border}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="font-semibold text-white">Say-It-Back result {n}</p>
+        <p className="font-semibold text-fg">Say-It-Back result {n}</p>
         <Pill tone={tone} swapKey={r.key}>{r.pass ? 'Passed' : 'Not passed'} · next: {r.next_step}</Pill>
       </div>
 
@@ -254,10 +254,10 @@ function SayItBackCard({ r, n }) {
               <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${t.soft} ${t.text}`}><Icon aria-hidden="true" className="h-5 w-5" /></span>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-2">
-                  <p className="font-semibold text-white">{s.name} <span className="text-[15px] font-normal text-muted">· {s.hint}</span></p>
+                  <p className="font-semibold text-fg">{s.name} <span className="text-base font-normal text-muted">· {s.hint}</span></p>
                   <p className={`font-semibold ${t.text}`}>{t.mark} {s.word}</p>
                 </div>
-                {s.metric && <p className="break-words font-mono text-[15px] text-muted">{s.metric}</p>}
+                {s.metric && <p className="break-words font-mono text-base text-muted">{s.metric}</p>}
               </div>
             </li>
           )

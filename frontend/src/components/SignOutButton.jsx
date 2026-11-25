@@ -11,7 +11,7 @@ export default function SignOutButton({ role, className = '' }) {
   }
   return (
     <button type="button" onClick={signOut}
-      className={`btn-ghost px-3 py-2 text-[15px] ${className}`}>
+      className={`btn-ghost px-3 py-2 text-base ${className}`}>
       <LogOut aria-hidden="true" className="h-4 w-4" />
       Sign out
     </button>

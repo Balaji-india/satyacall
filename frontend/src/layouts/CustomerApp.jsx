@@ -17,15 +17,16 @@ export default function CustomerApp() {
   const [params, setParams] = useSearchParams()
   const tab = params.get('tab') === 'verify' ? 'verify' : 'call'
 
-  // Bottom tab bar, like a banking app. Active tab = indigo icon + label + bar on top.
+  // Bottom tab bar, like a banking app. Active tab = ocean icon in a light-blue pill + ocean label.
   const tabBar = (
-    <nav role="tablist" className="sticky bottom-0 z-10 grid grid-cols-2 border-t border-line bg-white pb-[env(safe-area-inset-bottom)]">
+    <nav role="tablist" className="sticky bottom-0 z-10 grid grid-cols-2 border-t border-line bg-white px-3 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2">
       {TABS.map(([key, label, Icon]) => (
         <button key={key} role="tab" aria-selected={tab === key}
           onClick={() => setParams({ tab: key }, { replace: true })}
-          className={`relative flex min-h-16 flex-col items-center justify-center gap-1 text-[15px] font-semibold transition-colors focus-visible:-outline-offset-4 ${tab === key ? 'text-stamp' : 'text-muted hover:text-navy'}`}>
-          <span aria-hidden="true" className={`absolute inset-x-10 top-0 h-[3px] rounded-b-full ${tab === key ? 'bg-stamp' : 'bg-transparent'}`} />
-          <Icon aria-hidden="true" className="h-6 w-6" strokeWidth={tab === key ? 2.4 : 2} />
+          className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-2xl text-base font-semibold transition-colors focus-visible:-outline-offset-4 ${tab === key ? 'text-ocean-2' : 'text-muted hover:text-fg'}`}>
+          <span aria-hidden="true" className={`grid h-8 w-16 place-items-center rounded-full transition-colors ${tab === key ? 'bg-sky-2 text-ocean ring-1 ring-gold/60' : ''}`}>
+            <Icon className="h-5 w-5" strokeWidth={tab === key ? 2.3 : 2} />
+          </span>
           {label}
         </button>
       ))}

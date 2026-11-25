@@ -69,7 +69,7 @@ export default function AppPage() {
   return (
     <section className="space-y-5">
       <div>
-        <h1 className="text-[26px] font-bold leading-tight text-navy">Verify a caller</h1>
+        <h1 className="text-[26px] font-bold leading-tight text-fg">Verify a caller</h1>
         <p className="text-base text-muted">Someone says they're from SatyaBank? Check before you share anything.</p>
       </div>
 
@@ -88,7 +88,7 @@ export default function AppPage() {
 
       <div className="space-y-3">
         <p className="flex items-start gap-2 text-base text-muted">
-          <Phone aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-tide" />
+          <Phone aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
           Put the call on speakerphone, then let the caller talk for {RECORD_SECONDS} s.
         </p>
         <button onClick={start} disabled={!canRecord}
@@ -135,7 +135,7 @@ function CustomerPicker({ customers, peopleError, value, onChange, disabled }) {
         <>
           <input id="who" value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled}
             placeholder="your customer id" className="field font-mono text-lg" />
-          <p className="flex items-start gap-2 text-[15px] text-muted">
+          <p className="flex items-start gap-2 text-base text-muted">
             <AlertTriangle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-warn-fg" />
             <span className="min-w-0 break-words">{peopleError ? `Customer list unavailable (${peopleError}) — type your id.` : 'No enrolled customers — type your id.'}</span>
           </p>
@@ -152,10 +152,10 @@ function Result({ result, employeeId }) {
   return (
     <div className="space-y-4">
       {verified ? (
-        <Reveal className="flex gap-4 rounded-2xl bg-pass p-5 text-white shadow-[0_16px_36px_-16px_rgb(22_163_74/0.8)]">
-          <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-white/20"><DrawCheck className="h-9 w-9" /></span>
+        <Reveal className="verdict verdict-pass flex gap-4 p-5">
+          <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-pass text-white"><DrawCheck className="h-9 w-9" /></span>
           <div className="min-w-0">
-            <p className="flex items-center gap-2 text-base font-semibold text-white/90"><BadgeCheck aria-hidden="true" className="h-5 w-5" />Verified caller</p>
+            <p className="flex items-center gap-2 text-base font-semibold text-pass-fg"><BadgeCheck aria-hidden="true" className="h-5 w-5" />Verified caller</p>
             <p className="break-words font-display text-2xl font-bold leading-tight">
               {employee?.name ?? 'unknown name'}, {employee?.department ?? 'unknown department'}
             </p>
@@ -163,9 +163,9 @@ function Result({ result, employeeId }) {
           </div>
         </Reveal>
       ) : (
-        <Reveal className="space-y-3 rounded-2xl bg-stop p-5 text-white shadow-[0_16px_36px_-16px_rgb(220_38_38/0.8)]">
+        <Reveal className="verdict verdict-stop space-y-3 p-5">
           <div className="flex items-center gap-3">
-            <ShieldAlert aria-hidden="true" className="h-11 w-11 shrink-0" />
+            <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-stop text-white"><ShieldAlert aria-hidden="true" className="h-8 w-8" /></span>
             <p className="font-display text-2xl font-bold leading-tight">We can't confirm this caller</p>
           </div>
           <p className="text-lg">Hang up and call your bank's official number.</p>
@@ -174,7 +174,7 @@ function Result({ result, employeeId }) {
       )}
 
       <Reveal delay={0.08} className="card p-4">
-        <h2 className="mb-3 text-lg font-bold text-navy">Checks in order</h2>
+        <h2 className="mb-3 text-lg font-bold text-fg">Checks in order</h2>
         <ol>
           {verifySteps(result).map((step, i, all) => <Step key={step.key} n={i + 1} step={step} last={i === all.length - 1} />)}
         </ol>
@@ -196,7 +196,7 @@ function Step({ n, step, last }) {
   return (
     <li className="relative flex gap-3 pb-4 last:pb-0">
       {!last && <span aria-hidden="true" className="absolute bottom-1 left-[15px] top-9 w-0.5 bg-line" />}
-      <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full font-mono text-[15px] font-semibold text-white ${t.solid}`}>{n}</span>
+      <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border-2 bg-surface font-mono text-base font-bold ${t.border} ${t.text}`}>{n}</span>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center justify-between gap-x-3">
           <p className="font-semibold">{step.name}</p>
@@ -204,8 +204,8 @@ function Step({ n, step, last }) {
             <ToneIcon tone={step.tone} className="h-4 w-4" />{step.word}
           </p>
         </div>
-        <p className="text-[15px] text-muted">{step.hint}</p>
-        {step.metric && <p className="mt-1 break-words font-mono text-[15px]">{step.metric}</p>}
+        <p className="text-base text-muted">{step.hint}</p>
+        {step.metric && <p className="mt-1 break-words font-mono text-base">{step.metric}</p>}
       </div>
     </li>
   )
@@ -214,11 +214,11 @@ function Step({ n, step, last }) {
 // Big "call the bank" button — only with a configured number; otherwise point to the card.
 function OfficialNumber() {
   if (!OFFICIAL_NUMBER) {
-    return <p className="rounded-2xl bg-white p-4 text-center text-lg font-bold text-stop">Use the number on the back of your card</p>
+    return <p className="rounded-2xl bg-deep p-4 text-center text-lg font-bold text-white">Use the number on the back of your card</p>
   }
   return (
     <a href={`tel:${OFFICIAL_NUMBER.replace(/[^\d+]/g, '')}`}
-      className="flex items-center justify-center gap-2 rounded-2xl bg-white p-4 text-center text-lg font-bold text-stop">
+      className="flex items-center justify-center gap-2 rounded-2xl bg-deep p-4 text-center text-lg font-bold text-white hover:bg-ink">
       <Phone aria-hidden="true" className="h-5 w-5" />Call your bank: <span className="font-mono">{OFFICIAL_NUMBER}</span>
     </a>
   )

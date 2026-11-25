@@ -65,7 +65,7 @@ export default function AgentPage() {
   return (
     <section className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-2">
-        <h1 className="text-3xl font-bold text-white">Agent console</h1>
+        <h1 className="text-3xl font-bold text-fg">Agent console</h1>
         {!m.callId && (
           <p className="text-base text-muted">Go online, connect a call, then start monitoring to fill the trust timeline.</p>
         )}
@@ -109,10 +109,10 @@ export default function AgentPage() {
       <div className="grid gap-5 lg:grid-cols-12">
         <div className="card min-w-0 space-y-4 p-5 lg:col-span-8">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="flex items-center gap-2 text-xl font-bold text-white">
-              <Activity aria-hidden="true" className="h-5 w-5 text-tide" />Trust timeline
+            <h2 className="flex items-center gap-2 text-xl font-bold text-fg">
+              <Activity aria-hidden="true" className="h-5 w-5 text-accent" />Trust timeline
             </h2>
-            <span className="text-[15px] text-muted">one bar per 10 s clip · Aletheia AI score</span>
+            <span className="text-base text-muted">one bar per 10 s clip · Aletheia AI score</span>
           </div>
           <TrustTimeline rows={m.rows} />
           {m.rows.length > 0 && (

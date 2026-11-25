@@ -39,7 +39,7 @@ export function Reveal({ children, className = '', delay = 0 }) {
 // "How it decided": one plain-English line under a result, built from the response fields.
 export function HowItDecided({ children }) {
   return (
-    <p className="border-l-2 border-tide pl-3 text-base text-muted">
+    <p className="border-l-2 border-gold pl-3 text-base text-muted">
       <span className="font-semibold text-fg">How it decided: </span>{children}
     </p>
   )
