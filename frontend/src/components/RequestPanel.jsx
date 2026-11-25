@@ -3,10 +3,15 @@
 // CUSTOMER (remote stream), POST /say-it-back, resume. Every card = evidence + next step.
 import { useState } from 'react'
 import { errorText, requestAction, sayItBack } from '../api'
-import { authenticityText, speakerText } from '../checkText'
+import { authenticityText } from '../checkText'
 import { CLIP_SECONDS, recordClip } from '../clipRecorder'
 import { toWav16kMono } from '../toWav'
-import { CheckIcon, StopIcon } from './Icons'
+import { toast } from 'sonner'
+import { AlertTriangle, AudioLines, Ban, CheckCircle2, ClipboardList, Fingerprint, Loader2, MessageSquareQuote, MessageSquareText, Mic, RotateCw, ShieldQuestion, XCircle } from 'lucide-react'
+import { sayItBackSignals, sayItBackWhy } from '../explain'
+import { DrawCheck } from './Icons'
+import { HowItDecided, Pill, Reveal } from './Tone'
+import { TONE } from '../tone'
 
 const ACTIONS = [
   ['balance', 'Balance enquiry'], ['card_status', 'Card status'], ['statement', 'Statement'],
@@ -24,6 +29,8 @@ const FIELDS = {
   change_address: ['new_address'], card_new_address: ['new_address'],
 }
 const FIELD_LABEL = { payee_name: 'Payee name', amount: 'Amount (₹)', new_mobile: 'New mobile', new_email: 'New email', new_address: 'New address' }
+
+const FIELD = 'w-full rounded-lg border border-line bg-field px-3 py-2.5 text-base'
 
 const FALLBACK_TEXT = "Do not proceed. Use the bank's existing OTP to the registered number, or call back on the number on file."
 
@@ -62,6 +69,7 @@ export default function RequestPanel({ m, remoteStream }) {
       setSibStart(m.sayItBacks.length)
     } catch (err) {
       setError(`Request failed: ${errorText(err)}`)
+      toast.error('Request check failed', { description: errorText(err) })
     } finally {
       setSending(false)
     }
@@ -83,8 +91,12 @@ export default function RequestPanel({ m, remoteStream }) {
         return sayItBack(m.callId, wav, attempt)
       })
       m.addSayItBack(res)
+      // Toast text = the backend's own answer.
+      ;(res?.pass ? toast.success : res?.next_step === 'retry' ? toast.warning : toast.error)(
+        `Say-It-Back attempt ${attempt} sent: ${res?.pass ? 'passed' : 'not passed'}`, { description: `next step: ${res?.next_step}` })
     } catch (err) {
       setError(`Say-It-Back attempt ${attempt} failed: ${err.status ? errorText(err) : err.message}`)
+      toast.error(`Say-It-Back attempt ${attempt} failed`, { description: err.status ? errorText(err) : err.message })
     } finally {
       setRec(null)
     }
@@ -92,121 +104,167 @@ export default function RequestPanel({ m, remoteStream }) {
 
   const decision = action?.response?.decision
   const fallback = decision === 'fallback' || result?.next_step === 'fallback' || agentFallback
+  const riskTone = action?.response?.risk === 'high' ? 'warn' : 'pass'
 
   return (
-    <section className="glass min-w-0 space-y-3 p-4">
-      <h2 className="text-xl font-semibold">Customer request</h2>
+    <section className="card min-w-0 space-y-4 p-5">
+      <h2 className="flex items-center gap-2 text-xl font-bold text-fg">
+        <ClipboardList aria-hidden="true" className="h-5 w-5 text-accent" />Customer request
+      </h2>
 
-      <form onSubmit={submit} className="space-y-2 text-sm">
-        <select value={actionType} onChange={(e) => { setActionType(e.target.value); setAction(null); setAgentFallback(false) }}
-          className="w-full rounded-lg border px-3 py-2" disabled={busy}>
+      <form onSubmit={submit} className="space-y-3">
+        <label htmlFor="action-type" className="label block">What does the customer want?</label>
+        <select id="action-type" value={actionType} onChange={(e) => { setActionType(e.target.value); setAction(null); setAgentFallback(false) }}
+          className={FIELD} disabled={busy}>
           {ACTIONS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
         </select>
         {fields.map((f) => (
           <input key={f} value={values[f] ?? ''} placeholder={FIELD_LABEL[f]} aria-label={FIELD_LABEL[f]}
             type={f === 'amount' ? 'number' : f === 'new_email' ? 'email' : 'text'} min={f === 'amount' ? 1 : undefined}
             onChange={(e) => setValues({ ...values, [f]: e.target.value })}
-            className="w-full rounded-lg border px-3 py-2" disabled={busy} />
+            className={`${FIELD} ${f === 'amount' ? 'font-mono' : ''}`} disabled={busy} />
         ))}
         <button disabled={!live || busy || fields.some((f) => !(values[f] ?? '').trim())}
-          className="btn-primary w-full px-4 py-2.5 disabled:opacity-40 disabled:shadow-none">
+          className="btn-primary w-full px-4 py-3 text-base">
+          <ShieldQuestion aria-hidden="true" className="h-5 w-5" />
           {sending ? 'Checking request…' : 'Check request'}
         </button>
-        {!live && <p className="text-slate-500">Start monitoring a call first.</p>}
+        {!live && <p className="text-base text-muted">Start monitoring a call first — then requests are checked against the live call.</p>}
       </form>
 
-      {error && <p className="rounded-xl border border-stop/50 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+      {error && (
+        <p role="alert" className="flex items-start gap-2 rounded-xl border border-stop/50 bg-stop/10 p-3 text-base text-stop-fg">
+          <AlertTriangle aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0" /><span className="min-w-0 break-words">{error}</span>
+        </p>
+      )}
 
       {action && (
-        <p className="text-sm text-slate-600">
-          {action.label}: risk <b>{action.response.risk}</b> · decision <b>{decision}</b>
-        </p>
+        <div className="flex flex-wrap items-center gap-2 border-t border-line pt-4 text-base">
+          <span className="font-semibold text-fg">{action.label}</span>
+          <Pill tone={riskTone} swapKey={`${action.label}-${action.response.risk}`}>{action.response.risk} risk</Pill>
+          <span className="text-muted">decision <span className="font-mono text-fg">{decision}</span></span>
+        </div>
       )}
 
       {/* allow → green card with the evidence it was based on */}
       {decision === 'allow' && (
-        <div className="badge-in space-y-1 rounded-2xl border-2 border-pass bg-green-50 p-4 text-sm glow-pass">
-          <p className="text-xl font-bold text-green-800">✓ Allowed ({action.response.risk} risk)</p>
-          <p>Evidence: call state <b>{m.callState ?? 'none yet'}</b>, identity <b>{m.identity ?? 'none yet'}</b>
-            {latestClip && <> · latest clip: {latestClip.status === 'skipped' ? 'skipped' : authenticityText(latestClip.authenticity)}</>}</p>
-          <p>Next step: go ahead with the request.</p>
-        </div>
+        <Reveal className="space-y-2 rounded-2xl border border-pass/50 bg-pass/10 p-4">
+          <p className="flex items-center gap-2 font-display text-xl font-bold text-pass-fg">
+            <CheckCircle2 aria-hidden="true" className="h-6 w-6" />Allowed
+          </p>
+          <p className="text-base">
+            Evidence: call state <b>{m.callState ?? 'none yet'}</b>, identity <b>{m.identity ?? 'none yet'}</b>
+            {latestClip && <> · latest clip: <span className="font-mono text-base">{latestClip.status === 'skipped' ? 'skipped' : authenticityText(latestClip.authenticity)}</span></>}
+          </p>
+          <HowItDecided>
+            The backend rated “{action.label}” {action.response.risk} risk and allowed it while the call state
+            was {m.callState ?? 'not set yet'}.
+          </HowItDecided>
+          <p className="text-base font-semibold">Next step: go ahead with the request.</p>
+        </Reveal>
       )}
 
       {/* say_it_back → the sentence big + record button(s) */}
       {decision === 'say_it_back' && (
-        <div className="quote-card space-y-3 p-5">
-          <p className="text-sm text-slate-500">Ask the customer to say</p>
-          <p className="text-3xl font-semibold leading-snug text-white">“{action.response.sentence ?? 'the backend sent no sentence'}”</p>
+        <Reveal className="quote-card space-y-3 p-5">
+          <p className="label flex items-center gap-2"><MessageSquareQuote aria-hidden="true" className="h-4 w-4 text-accent" />Ask the customer to say</p>
+          <p className="font-display text-2xl font-semibold leading-snug text-fg">“{action.response.sentence ?? 'the backend sent no sentence'}”</p>
 
           {rec && (
-            <p className={`rounded-xl p-3 text-center text-lg font-semibold text-white ${rec.phase === 'recording' ? 'rec-ring border-2 border-stop bg-stop/25' : 'bg-white/10'}`}>
+            <p className={`flex items-center justify-center gap-2 rounded-xl p-3 text-center text-lg font-semibold text-fg ${rec.phase === 'recording' ? 'rec-ring border-2 border-stop bg-stop/20' : 'bg-fg/10'}`}>
               {rec.phase === 'recording'
-                ? `● Recording customer… ${rec.secondsLeft} s (attempt ${rec.attempt})`
-                : `Checking attempt ${rec.attempt} (speech-to-text + Eidos + Aletheia)…`}
+                ? <><Mic aria-hidden="true" className="h-5 w-5" />Recording customer… <span className="font-mono">{rec.secondsLeft} s</span> (attempt {rec.attempt})</>
+                : <><Loader2 aria-hidden="true" className="h-5 w-5 animate-spin" />Checking attempt {rec.attempt} (speech-to-text + Eidos + Aletheia)…</>}
             </p>
           )}
 
           {!rec && !result && (
-            <button onClick={() => confirm(1)} disabled={!live}
-              className="btn-primary w-full px-4 py-3 text-lg glow-stamp disabled:opacity-40 disabled:shadow-none">
-              Record confirmation ({CLIP_SECONDS} s)
+            <button onClick={() => confirm(1)} disabled={!live} className="btn-primary w-full px-4 py-3 text-lg">
+              <Mic aria-hidden="true" className="h-5 w-5" />Record confirmation ({CLIP_SECONDS} s)
             </button>
           )}
           {!rec && result?.next_step === 'retry' && !agentFallback && (
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button onClick={() => confirm(2)} disabled={!live}
-                className="flex-1 rounded-xl bg-warn px-4 py-2.5 font-semibold text-slate-950 glow-warn disabled:opacity-40">
-                Try again (attempt 2)
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-warn px-4 py-2.5 font-bold text-ink disabled:opacity-40">
+                <RotateCw aria-hidden="true" className="h-4 w-4" />Try again (attempt 2)
               </button>
               <button onClick={() => setAgentFallback(true)}
                 title="Skip attempt 2: no new recording, no more credits spent"
-                className="flex-1 rounded-xl bg-stop px-4 py-2.5 font-semibold text-white glow-stop">
-                Stop — use fallback
+                className="btn-danger flex-1 px-4 py-2.5">
+                <Ban aria-hidden="true" className="h-4 w-4" />Stop — use fallback
               </button>
             </div>
           )}
-        </div>
+        </Reveal>
       )}
 
-      {results.map((r) => <SayItBackCard key={r.key} r={r} />)}
+      {results.map((r, i) => <SayItBackCard key={r.key} r={r} n={i + 1} />)}
 
       {/* fallback (from the action decision, or after a failed Say-It-Back) */}
       {fallback && (
-        <div className="badge-in space-y-2 rounded-2xl bg-stop p-4 text-white glow-stop">
-          <p className="flex items-center gap-2 text-2xl font-bold"><StopIcon className="h-8 w-8 shrink-0" />Do not proceed</p>
-          <p className="text-sm">
-            Evidence: {agentFallback ? 'Fallback chosen by agent after attempt 1 (Say-It-Back details above)'
+        <Reveal className="verdict verdict-stop space-y-3 p-4">
+          <p className="flex items-center gap-2 font-display text-2xl font-bold text-stop-fg"><XCircle aria-hidden="true" className="h-8 w-8 shrink-0" />Do not proceed</p>
+          <p className="text-base">
+            <span className="font-semibold">How it decided: </span>
+            {agentFallback ? 'Fallback chosen by agent after attempt 1 (Say-It-Back details above)'
               : result ? 'Say-It-Back did not pass (details above)' : `backend decision "fallback" for ${action.label}`}
             {' '}· call state {m.callState ?? 'none yet'} · identity {m.identity ?? 'none yet'}
           </p>
-          <p className="rounded-xl bg-black/25 p-3 text-lg font-semibold">Next step: {FALLBACK_TEXT}</p>
-        </div>
+          <p className="rounded-xl bg-ink/50 p-3 text-lg font-semibold">Next step: {FALLBACK_TEXT}</p>
+        </Reveal>
       )}
       {result?.next_step === 'approved' && (
-        <div className="badge-in flex items-center gap-4 rounded-2xl bg-pass p-4 text-white glow-pass">
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white/20"><CheckIcon /></span>
+        <Reveal className="verdict verdict-pass flex items-center gap-4 p-4">
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-pass text-ink"><DrawCheck /></span>
           <div>
-          <p className="text-2xl font-bold">Approved</p>
-          <p className="text-base">Next step: complete the customer's request.</p>
+            <p className="font-display text-2xl font-bold text-pass-fg">Approved</p>
+            <p className="text-base">Next step: complete the customer's request.</p>
           </div>
-        </div>
+        </Reveal>
       )}
     </section>
   )
 }
 
-// One Say-It-Back result: the evidence for each of the three checks.
-function SayItBackCard({ r }) {
-  const tone = r.pass ? 'border-pass' : r.next_step === 'retry' ? 'border-warn' : 'border-stop'
+const SIGNAL_ICON = { words: MessageSquareText, person: Fingerprint, human: AudioLines }
+
+// One Say-It-Back result as "3 signals": Words · Same person (Eidos) · Real human (Aletheia),
+// each with icon, ✓/✗ word and the score vs threshold from the response.
+function SayItBackCard({ r, n }) {
+  const tone = r.pass ? 'pass' : r.next_step === 'retry' ? 'warn' : 'stop'
   return (
-    <div className={`badge-in space-y-1 rounded-xl border-l-4 ${tone} bg-white/5 p-3 text-sm`}>
-      <p className="font-semibold">Say-It-Back: {r.pass ? 'passed' : 'not passed'} · next step {r.next_step}</p>
-      <p><b>Heard:</b> “{r.transcript ?? '—'}”</p>
-      <p><b>Expected:</b> “{r.expected ?? '—'}”</p>
-      <p><b>Text match:</b> {r.text_match ?? '—'}</p>
-      <p><b>Aletheia:</b> {authenticityText(r.authenticity)}</p>
-      <p><b>Eidos:</b> {speakerText(r.speaker)}</p>
-    </div>
+    <Reveal className={`space-y-3 rounded-2xl border bg-inset p-4 ${TONE[tone].border}`}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="font-semibold text-fg">Say-It-Back result {n}</p>
+        <Pill tone={tone} swapKey={r.key}>{r.pass ? 'Passed' : 'Not passed'} · next: {r.next_step}</Pill>
+      </div>
+
+      <dl className="space-y-1 text-base">
+        <div className="flex gap-2"><dt className="w-20 shrink-0 text-muted">Expected</dt><dd className="min-w-0">“{r.expected ?? '—'}”</dd></div>
+        <div className="flex gap-2"><dt className="w-20 shrink-0 text-muted">Heard</dt><dd className="min-w-0">“{r.transcript ?? '—'}”</dd></div>
+      </dl>
+
+      <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface">
+        {sayItBackSignals(r).map((s) => {
+          const Icon = SIGNAL_ICON[s.key]
+          const t = TONE[s.tone]
+          return (
+            <li key={s.key} className="flex items-start gap-3 p-3">
+              <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${t.soft} ${t.text}`}><Icon aria-hidden="true" className="h-5 w-5" /></span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-2">
+                  <p className="font-semibold text-fg">{s.name} <span className="text-base font-normal text-muted">· {s.hint}</span></p>
+                  <p className={`font-semibold ${t.text}`}>{t.mark} {s.word}</p>
+                </div>
+                {s.metric && <p className="break-words font-mono text-base text-muted">{s.metric}</p>}
+              </div>
+            </li>
+          )
+        })}
+      </ul>
+
+      <HowItDecided>{sayItBackWhy(r)}</HowItDecided>
+    </Reveal>
   )
 }

@@ -1,53 +1,42 @@
 // Badges — call state (VERIFYING / VERIFIED / WATCH / ALERT) and the separate identity badge.
-// Colour always comes with a text label, never colour alone. Both are pills with a status dot;
-// the call-state pill is bigger and spells out "(voice authenticity)" so the two are never confused.
+// Icon + word + colour, never colour alone. Each has its own label ("Call state · voice
+// authenticity" vs "Identity · Eidos") so the two are never confused. The pill animates in again
+// only when its value changes (Pill swapKey).
+import { Pill } from './Tone'
 
-// Pill colours per state: tinted glass + coloured border/dot, with a glow in the state colour.
-const STATE_STYLE = {
-  verifying: { pill: 'border-white/20 bg-white/5 text-ink', dot: 'bg-slate-400' },
-  verified: { pill: 'border-pass/60 bg-pass/15 text-green-700 glow-pass', dot: 'bg-pass' },
-  watch: { pill: 'border-warn/60 bg-warn/15 text-amber-700 glow-warn', dot: 'bg-warn' },
-  alert: { pill: 'border-stop/70 bg-stop/20 text-red-700 glow-stop', dot: 'bg-stop live-dot' },
+const STATE_TONE = { verifying: 'skip', verified: 'pass', watch: 'warn', alert: 'stop' }
+const IDENTITY_TONE = { match: 'pass', no_match: 'stop', not_checked: 'skip' }
+const IDENTITY_TEXT = { match: 'Match', no_match: 'No match', not_checked: 'Not checked' }
+
+function Labelled({ label, sub, title, children }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-1.5" title={title}>
+      <span className="label">{label} <span className="opacity-80">· {sub}</span></span>
+      <div className="flex">{children}</div>
+    </div>
+  )
 }
-const NONE = { pill: 'border-white/15 bg-white/5 text-slate-500', dot: 'bg-slate-400' }
-
-const IDENTITY_STYLE = {
-  match: { pill: 'border-pass/60 bg-pass/15 text-green-700 glow-pass', dot: 'bg-pass' },
-  no_match: { pill: 'border-stop/70 bg-stop/20 text-red-700 glow-stop', dot: 'bg-stop' },
-  not_checked: { pill: 'border-white/15 bg-white/5 text-slate-600', dot: 'bg-slate-400' },
-}
-
-const IDENTITY_TEXT = { match: 'match', no_match: 'no match', not_checked: 'not checked' }
-
-const PILL = 'badge-in inline-flex items-center gap-2 rounded-full border px-4 py-1.5'
-const DOT = 'inline-block h-2.5 w-2.5 shrink-0 rounded-full'
 
 // state = the backend's call_state (null before the first result).
-// Reads "Call state: VERIFIED (voice authenticity)" so it is never taken for the identity badge.
-// key={state}: React re-mounts the pill when the state changes, so it animates in again only then.
 export function StateBadge({ state }) {
-  const s = STATE_STYLE[state] ?? NONE
   return (
-    <span key={state ?? 'none'} className={`${PILL} ${s.pill}`}
+    <Labelled label="Call state" sub="voice authenticity"
       title="Call state = voice authenticity over the call (Aletheia: real human voice or AI-generated?)">
-      <span className={`${DOT} ${s.dot}`} />
-      <span className="text-sm">Call state:</span>
-      <span className="text-xl font-extrabold leading-none tracking-wide font-stretch-condensed">
-        {state ? state.toUpperCase() : 'none yet'}
-      </span>
-      <span className="text-sm opacity-80">(voice authenticity)</span>
-    </span>
+      <Pill tone={STATE_TONE[state] ?? 'skip'} swapKey={state ?? 'none'} className={`text-lg tracking-wide ${state === 'alert' ? 'rec-ring' : ''}`}>
+        {state ? state.toUpperCase() : 'None yet'}
+      </Pill>
+    </Labelled>
   )
 }
 
 // identity = ClipResult.identity or the latest Say-It-Back speaker.decision (Eidos).
 export function IdentityBadge({ identity }) {
-  const s = IDENTITY_STYLE[identity] ?? NONE
   return (
-    <span key={identity ?? 'none'} className={`${PILL} text-sm font-semibold ${s.pill}`}
+    <Labelled label="Identity" sub="Eidos voice match"
       title="Identity = Eidos voice match against the claimed customer (only checked at Say-It-Back or the first clip)">
-      <span className={`${DOT} ${s.dot}`} />
-      Identity: {IDENTITY_TEXT[identity] ?? 'no result yet'}
-    </span>
+      <Pill tone={IDENTITY_TONE[identity] ?? 'skip'} swapKey={identity ?? 'none'} className="text-lg">
+        {IDENTITY_TEXT[identity] ?? 'No result yet'}
+      </Pill>
+    </Labelled>
   )
 }

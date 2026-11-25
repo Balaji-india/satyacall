@@ -1,7 +1,7 @@
 // effects.js — "calm mode": turn the decoration off so the live call and recording get the CPU.
 // Calm = (a call / recording is active) OR (the user ticked "Reduce effects").
-// While calm, <body> has class "calm": index.css pauses the CyberBackground animations and drops
-// backdrop-filter blur, and TrustTimeline turns off Recharts bar animation.
+// While calm, <body> has class "calm": index.css drops the glass blur, VoiceOrb shows its still
+// CSS version ("Reduce effects"), and TrustTimeline turns off Recharts bar animation.
 // Purely visual — never touches audio, recording or requests.
 import { useEffect, useSyncExternalStore } from 'react'
 

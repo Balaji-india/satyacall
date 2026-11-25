@@ -3,12 +3,16 @@
 // the call on speakerphone, records 10 s from THIS phone's mic → POST /api/verify-caller.
 // The backend decides (call log + Eidos + Aletheia); we only show its answer and evidence.
 import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
+import { AlertTriangle, BadgeCheck, Mic, Phone, ShieldAlert } from 'lucide-react'
 import { errorText, listPeople, verifyCaller } from '../api'
-import { authenticityText, speakerText } from '../checkText'
 import { getSession } from '../session'
 import { useCalmWhile } from '../effects'
 import { useMicRecorder } from '../useMicRecorder'
-import { CheckIcon, StopIcon } from '../components/Icons'
+import { verifySteps, verifyWhy } from '../explain'
+import { DrawCheck } from '../components/Icons'
+import { HowItDecided, Reveal, ToneIcon } from '../components/Tone'
+import { TONE } from '../tone'
 
 const RECORD_SECONDS = 10
 // Which GET /api/people field is sent as customer_id. person_id = what /agent sends as
@@ -40,9 +44,14 @@ export default function AppPage() {
   const send = async (blob) => {
     setChecking(true)
     try {
-      setResult(await verifyCaller(blob, employeeId, customerId.trim()))
+      const res = await verifyCaller(blob, employeeId, customerId.trim())
+      setResult(res)
+      // Toast = the backend's own verdict, worded for the customer.
+      if (res?.verified) toast.success(`Caller verified${res.employee?.name ? `: ${res.employee.name}` : ''}`)
+      else toast.error("We can't confirm this caller")
     } catch (err) {
       setError(errorText(err))
+      toast.error('Could not check this caller', { description: errorText(err) })
     } finally {
       setChecking(false)
     }
@@ -59,54 +68,64 @@ export default function AppPage() {
 
   return (
     <section className="space-y-5">
-      <h1 className="text-2xl font-bold">Verify this caller</h1>
-
-      <CustomerPicker customers={customers} peopleError={peopleError} value={customerId}
-        onChange={change(setCustomerId)} disabled={busy} />
-
-      <div className="space-y-1">
-        <label htmlFor="emp" className="block text-sm font-medium">Caller's employee ID</label>
-        <input id="emp" inputMode="numeric" autoComplete="off" value={employeeId} disabled={busy}
-          onChange={(e) => change(setEmployeeId)(e.target.value.replace(/\D/g, ''))}
-          placeholder="Ask the caller, e.g. 4521"
-          className="w-full rounded-xl border px-4 py-3 text-lg tracking-widest" />
+      <div>
+        <h1 className="text-[26px] font-bold leading-tight text-fg">Verify a caller</h1>
+        <p className="text-base text-muted">Someone says they're from SatyaBank? Check before you share anything.</p>
       </div>
 
-      <div className="space-y-2">
-        <p className="text-sm text-slate-600">Put the call on speakerphone, then let the caller talk for {RECORD_SECONDS} s.</p>
+      <div className="card space-y-4 p-4">
+        <CustomerPicker customers={customers} peopleError={peopleError} value={customerId}
+          onChange={change(setCustomerId)} disabled={busy} />
+
+        <div className="space-y-1.5">
+          <label htmlFor="emp" className="label block">Caller's employee ID</label>
+          <input id="emp" inputMode="numeric" autoComplete="off" value={employeeId} disabled={busy}
+            onChange={(e) => change(setEmployeeId)(e.target.value.replace(/\D/g, ''))}
+            placeholder="Ask the caller, e.g. 4521"
+            className="field font-mono text-xl tracking-[0.2em] placeholder:font-sans placeholder:text-base placeholder:tracking-normal" />
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <p className="flex items-start gap-2 text-base text-muted">
+          <Phone aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
+          Put the call on speakerphone, then let the caller talk for {RECORD_SECONDS} s.
+        </p>
         <button onClick={start} disabled={!canRecord}
-          className={`btn-primary w-full rounded-2xl py-5 text-xl transition disabled:opacity-40 disabled:shadow-none ${mic.recording ? 'rec-ring bg-none bg-stop' : 'glow-stamp'}`}>
+          className={`btn-primary min-h-16 w-full rounded-2xl py-4 text-lg ${mic.recording ? 'rec-ring !bg-stop' : ''}`}>
+          <Mic aria-hidden="true" className="h-6 w-6" />
           {mic.starting ? 'Opening microphone…'
-            : mic.recording ? `Recording… ${Math.max(RECORD_SECONDS - mic.elapsed, 0)} s`
+            : mic.recording ? <>Recording… <span className="font-mono">{Math.max(RECORD_SECONDS - mic.elapsed, 0)} s</span></>
             : checking ? 'Checking with your bank…'
             : `Record caller (${RECORD_SECONDS} s)`}
         </button>
-        {mic.error && <p className="break-words rounded bg-red-50 p-2 text-sm text-red-700">{mic.error}</p>}
+        {mic.error && <p role="alert" className="break-words rounded-xl border border-stop/40 bg-stop/10 p-3 text-base text-stop-fg">{mic.error}</p>}
       </div>
 
       {error && (
-        <div className="space-y-2 rounded-2xl border border-stop/50 bg-red-50 p-4 text-red-800">
-          <p className="font-semibold">Could not check this caller</p>
-          <p className="break-words text-sm">{error}</p>
-          <p className="text-sm">Until it is checked, treat the caller as unconfirmed.</p>
+        <Reveal className="space-y-3 rounded-2xl border border-warn/50 bg-warn/10 p-4">
+          <p className="flex items-center gap-2 text-lg font-bold text-warn-fg">
+            <AlertTriangle aria-hidden="true" className="h-6 w-6 shrink-0" />Could not check this caller
+          </p>
+          <p className="break-words text-base">{error}</p>
+          <p className="text-base">Until it is checked, treat the caller as unconfirmed.</p>
           <OfficialNumber />
-        </div>
+        </Reveal>
       )}
 
-      {result && <Result result={result} />}
+      {result && <Result result={result} employeeId={employeeId} />}
     </section>
   )
 }
 
 // "Logged in as": dropdown of enrolled customers, or a text box if the list isn't available.
 function CustomerPicker({ customers, peopleError, value, onChange, disabled }) {
-  if (customers === null) return <p className="text-sm text-slate-500">Loading customers…</p>
+  if (customers === null) return <p className="text-base text-muted">Loading customers…</p>
   return (
-    <div className="space-y-1">
-      <label htmlFor="who" className="block text-sm font-medium">Logged in as</label>
+    <div className="space-y-1.5">
+      <label htmlFor="who" className="label block">Logged in as</label>
       {customers.length > 0 ? (
-        <select id="who" value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled}
-          className="w-full rounded-xl border px-4 py-3 text-lg">
+        <select id="who" value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} className="field text-lg">
           <option value="">choose…</option>
           {customers.map((p) => (
             <option key={p.person_id} value={p[CUSTOMER_ID_FIELD]}>{p.display_name} ({p[CUSTOMER_ID_FIELD]})</option>
@@ -115,9 +134,10 @@ function CustomerPicker({ customers, peopleError, value, onChange, disabled }) {
       ) : (
         <>
           <input id="who" value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled}
-            placeholder="your customer id" className="w-full rounded-xl border px-4 py-3 text-lg" />
-          <p className="text-sm text-slate-500">
-            {peopleError ? `Customer list unavailable (${peopleError}) — type your id.` : 'No enrolled customers — type your id.'}
+            placeholder="your customer id" className="field font-mono text-lg" />
+          <p className="flex items-start gap-2 text-base text-muted">
+            <AlertTriangle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-warn-fg" />
+            <span className="min-w-0 break-words">{peopleError ? `Customer list unavailable (${peopleError}) — type your id.` : 'No enrolled customers — type your id.'}</span>
           </p>
         </>
       )}
@@ -125,90 +145,81 @@ function CustomerPicker({ customers, peopleError, value, onChange, disabled }) {
   )
 }
 
-// The backend's answer: big verdict, then each check with its evidence, then next_step.
-function Result({ result }) {
-  const { verified, checks = {}, employee, next_step } = result
+// The backend's answer: big verdict card, the checks in the order they run, how it decided,
+// then next_step.
+function Result({ result, employeeId }) {
+  const { verified, employee, next_step } = result
   return (
     <div className="space-y-4">
       {verified ? (
-        <div className="badge-in flex gap-4 rounded-2xl bg-pass p-5 text-white glow-pass">
-          <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-white/20"><CheckIcon className="h-9 w-9" /></span>
+        <Reveal className="verdict verdict-pass flex gap-4 p-5">
+          <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-pass text-white"><DrawCheck className="h-9 w-9" /></span>
           <div className="min-w-0">
-            <p className="break-words text-2xl font-bold">
-              Verified: {employee?.name ?? 'unknown name'}, {employee?.department ?? 'unknown department'}
+            <p className="flex items-center gap-2 text-base font-semibold text-pass-fg"><BadgeCheck aria-hidden="true" className="h-5 w-5" />Verified caller</p>
+            <p className="break-words font-display text-2xl font-bold leading-tight">
+              {employee?.name ?? 'unknown name'}, {employee?.department ?? 'unknown department'}
             </p>
-            <p className="mt-1 text-lg">You can continue the call.</p>
+            <p className="mt-1 text-base">You can continue the call.</p>
           </div>
-        </div>
+        </Reveal>
       ) : (
-        <div className="badge-in space-y-3 rounded-2xl bg-stop p-5 text-white glow-stop">
+        <Reveal className="verdict verdict-stop space-y-3 p-5">
           <div className="flex items-center gap-3">
-            <StopIcon className="h-10 w-10 shrink-0" />
-            <p className="text-2xl font-bold">We can't confirm this caller</p>
+            <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-stop text-white"><ShieldAlert aria-hidden="true" className="h-8 w-8" /></span>
+            <p className="font-display text-2xl font-bold leading-tight">We can't confirm this caller</p>
           </div>
           <p className="text-lg">Hang up and call your bank's official number.</p>
           <OfficialNumber />
-        </div>
+        </Reveal>
       )}
 
-      <ul className="glass divide-y divide-white/10">
-        <CallLogCheck c={checks.call_log} />
-        <SpeakerCheck s={checks.speaker} />
-        <AuthenticityCheck a={checks.authenticity} />
-      </ul>
+      <Reveal delay={0.08} className="card p-4">
+        <h2 className="mb-3 text-lg font-bold text-fg">Checks in order</h2>
+        <ol>
+          {verifySteps(result).map((step, i, all) => <Step key={step.key} n={i + 1} step={step} last={i === all.length - 1} />)}
+        </ol>
+      </Reveal>
 
-      {next_step && (
-        <p className="glass p-4"><span className="font-semibold">Next step: </span>{next_step}</p>
-      )}
+      <Reveal delay={0.14} className="space-y-3">
+        <HowItDecided>{verifyWhy(result, employeeId)}</HowItDecided>
+        {next_step && (
+          <p className="card p-4 text-base"><span className="font-semibold">Next step: </span>{next_step}</p>
+        )}
+      </Reveal>
     </div>
+  )
+}
+
+// One step of the stepper: number on a rail, name, verdict (icon + word), evidence in mono.
+function Step({ n, step, last }) {
+  const t = TONE[step.tone]
+  return (
+    <li className="relative flex gap-3 pb-4 last:pb-0">
+      {!last && <span aria-hidden="true" className="absolute bottom-1 left-[15px] top-9 w-0.5 bg-line" />}
+      <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border-2 bg-surface font-mono text-base font-bold ${t.border} ${t.text}`}>{n}</span>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center justify-between gap-x-3">
+          <p className="font-semibold">{step.name}</p>
+          <p className={`inline-flex items-center gap-1 text-base font-semibold ${t.text}`}>
+            <ToneIcon tone={step.tone} className="h-4 w-4" />{step.word}
+          </p>
+        </div>
+        <p className="text-base text-muted">{step.hint}</p>
+        {step.metric && <p className="mt-1 break-words font-mono text-base">{step.metric}</p>}
+      </div>
+    </li>
   )
 }
 
 // Big "call the bank" button — only with a configured number; otherwise point to the card.
 function OfficialNumber() {
   if (!OFFICIAL_NUMBER) {
-    return <p className="rounded-2xl bg-white p-5 text-center text-xl font-bold text-stop">Use the number on the back of your card</p>
+    return <p className="rounded-2xl bg-deep p-4 text-center text-lg font-bold text-white">Use the number on the back of your card</p>
   }
   return (
     <a href={`tel:${OFFICIAL_NUMBER.replace(/[^\d+]/g, '')}`}
-      className="block rounded-2xl bg-white p-5 text-center text-xl font-bold text-stop shadow-[0_0_30px_-6px_rgb(255_255_255/0.6)]">
-      Call your bank: {OFFICIAL_NUMBER}
+      className="flex items-center justify-center gap-2 rounded-2xl bg-deep p-4 text-center text-lg font-bold text-white hover:bg-ink">
+      <Phone aria-hidden="true" className="h-5 w-5" />Call your bank: <span className="font-mono">{OFFICIAL_NUMBER}</span>
     </a>
   )
-}
-
-// One row of the checks list. mark: true = ✓, false = ✗, null = not run / unavailable (–).
-function CheckRow({ name, mark, text }) {
-  const icon = mark === true ? '✓' : mark === false ? '✗' : '–'
-  const color = mark === true ? 'text-green-700' : mark === false ? 'text-red-700' : 'text-slate-500'
-  return (
-    <li className="flex gap-3 p-3">
-      <span className={`text-xl font-bold ${color}`}>{icon}</span>
-      <div className="min-w-0">
-        <p className="font-semibold">{name}</p>
-        <p className="break-words text-sm text-slate-600">{text}</p>
-      </div>
-    </li>
-  )
-}
-
-// call_log = { pass, detail } — does the bank have an outbound call from this employee to me?
-function CallLogCheck({ c }) {
-  if (!c) return <CheckRow name="Bank call log" mark={null} text="no result from the backend" />
-  return <CheckRow name="Bank call log" mark={c.pass === true ? true : c.pass === false ? false : null}
-    text={c.detail ?? (c.pass ? 'call found' : 'no call found')} />
-}
-
-// speaker (Eidos) — is this the voice enrolled for that employee?
-function SpeakerCheck({ s }) {
-  const mark = s?.decision === 'match' ? true : s?.decision === 'no_match' ? false : null
-  return <CheckRow name="Voice match" mark={mark}
-    text={s ? speakerText(s, 'Voice check skipped — no call record found') : 'no result from the backend'} />
-}
-
-// authenticity (Aletheia) — real human voice or AI-generated?
-function AuthenticityCheck({ a }) {
-  const mark = a?.verdict === 'real' ? true : a?.verdict === 'fake' ? false : null
-  const text = !a || a.verdict === 'not_checked' ? 'skipped — not run' : authenticityText(a)
-  return <CheckRow name="Real voice" mark={mark} text={text} />
 }

@@ -1,12 +1,24 @@
-// EvidenceDrawer — bottom of /agent: every check of this call with its raw JSON, a link to
+// EvidenceDrawer — bottom zone of /agent: every check of this call with its raw JSON, a link to
 // export the backend's evidence file, and "Was this right? ✓ / ✗" → POST /api/feedback
 // (forwarded to DetectifAI, free). Shows exactly what the backend returned.
 import { useState } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
+import { ChevronDown, FileJson, FolderSearch, ThumbsDown, ThumbsUp } from 'lucide-react'
 import { errorText, evidenceUrl, sendFeedback } from '../api'
 
 export default function EvidenceDrawer({ m }) {
   const [open, setOpen] = useState(false)
-  if (!m.callId) return null
+
+  // No call yet: the drawer stays as a closed bar that says what will appear here.
+  if (!m.callId) {
+    return (
+      <section className="card flex items-center gap-3 p-4 opacity-80">
+        <FolderSearch aria-hidden="true" className="h-5 w-5 text-muted" />
+        <span className="font-semibold text-fg">Evidence</span>
+        <span className="text-base text-muted">Every clip result and Say-It-Back attempt of a monitored call appears here, with its raw JSON.</span>
+      </section>
+    )
+  }
 
   // All checks in arrival order: timeline clips, then Say-It-Back attempts.
   const checks = [
@@ -19,40 +31,43 @@ export default function EvidenceDrawer({ m }) {
   ]
 
   return (
-    <section className="rounded-lg border">
-      <div className="flex flex-wrap items-center gap-3 p-3">
-        <button onClick={() => setOpen(!open)} className="font-semibold">
-          {open ? '▾' : '▸'} Evidence ({checks.length} checks)
+    <section className="card overflow-hidden">
+      <div className="flex flex-wrap items-center gap-3 p-4">
+        <button onClick={() => setOpen(!open)} aria-expanded={open} className="inline-flex items-center gap-2 text-lg font-semibold text-fg">
+          <ChevronDown aria-hidden="true" className={`h-5 w-5 transition-transform ${open ? '' : '-rotate-90'}`} />
+          Evidence <span className="font-mono text-base font-normal text-muted">({checks.length} checks)</span>
         </button>
-        <a href={evidenceUrl(m.callId)} target="_blank" rel="noreferrer"
-          className="ml-auto rounded border px-3 py-1 text-sm hover:bg-slate-100">
-          Export evidence (JSON)
+        <a href={evidenceUrl(m.callId)} target="_blank" rel="noreferrer" className="btn-ghost ml-auto px-3 py-2 text-base">
+          <FileJson aria-hidden="true" className="h-4 w-4" />Export evidence (JSON)
         </a>
       </div>
 
-      {open && (
-        <ul className="divide-y border-t text-sm">
-          {checks.length === 0 && <li className="p-3 text-slate-500">No checks yet — each 10 s clip result and each Say-It-Back attempt appears here.</li>}
-          {checks.map((c) => (
-            <li key={c.key} className="space-y-2 p-3">
-              <p className="font-medium">{c.title}</p>
-              <div className="flex flex-wrap gap-4">
-                <Feedback label="Aletheia (voice authenticity)" operationId={c.data.authenticity?.operation_id} />
-                {/* Eidos only when it really ran (match / no_match) */}
-                {['match', 'no_match'].includes(c.data.speaker?.decision) && (
-                  <Feedback label="Eidos (identity)" operationId={c.data.speaker?.operation_id} />
-                )}
-              </div>
-              <details>
-                <summary className="cursor-pointer text-slate-600">Raw JSON</summary>
-                <pre className="max-h-72 overflow-auto rounded bg-slate-900 p-2 text-sm text-slate-300">
-                  {JSON.stringify(c.data, null, 2)}
-                </pre>
-              </details>
-            </li>
-          ))}
-        </ul>
-      )}
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.ul initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }} className="divide-y divide-line border-t border-line text-base">
+            {checks.length === 0 && <li className="p-4 text-muted">No checks yet — each 10 s clip result and each Say-It-Back attempt appears here.</li>}
+            {checks.map((c) => (
+              <li key={c.key} className="space-y-2 p-4">
+                <p className="font-semibold text-fg">{c.title}</p>
+                <div className="flex flex-wrap gap-4">
+                  <Feedback label="Aletheia (voice authenticity)" operationId={c.data.authenticity?.operation_id} />
+                  {/* Eidos only when it really ran (match / no_match) */}
+                  {['match', 'no_match'].includes(c.data.speaker?.decision) && (
+                    <Feedback label="Eidos (identity)" operationId={c.data.speaker?.operation_id} />
+                  )}
+                </div>
+                <details>
+                  <summary className="cursor-pointer text-muted hover:text-fg">Raw JSON</summary>
+                  <pre className="mt-2 max-h-72 overflow-auto rounded-lg border border-line bg-ink p-3 font-mono text-sm text-fg/85">
+                    {JSON.stringify(c.data, null, 2)}
+                  </pre>
+                </details>
+              </li>
+            ))}
+          </motion.ul>
+        )}
+      </AnimatePresence>
     </section>
   )
 }
@@ -60,7 +75,7 @@ export default function EvidenceDrawer({ m }) {
 // "Was this right? ✓ / ✗" for one DetectifAI operation.
 function Feedback({ label, operationId }) {
   const [state, setState] = useState(null) // null | { sending } | { ok, text }
-  if (!operationId) return <span className="text-slate-400">{label}: no operation id (check did not run)</span>
+  if (!operationId) return <span className="text-muted">{label}: no operation id (check did not run)</span>
 
   const send = async (correct) => {
     setState({ sending: true })
@@ -74,11 +89,15 @@ function Feedback({ label, operationId }) {
 
   return (
     <span className="flex flex-wrap items-center gap-2">
-      <span className="text-slate-600">{label} — was this right?</span>
-      <button onClick={() => send(true)} disabled={state?.sending} className="rounded border px-2 disabled:opacity-40">✓</button>
-      <button onClick={() => send(false)} disabled={state?.sending} className="rounded border px-2 disabled:opacity-40">✗</button>
-      {state?.sending && <span className="text-slate-500">sending…</span>}
-      {state?.text && <span className={`text-sm ${state.ok ? 'text-green-700' : 'text-red-700'}`}>{state.text}</span>}
+      <span className="text-muted">{label} — was this right?</span>
+      <button onClick={() => send(true)} disabled={state?.sending} className="btn-ghost px-2.5 py-1" aria-label="Right">
+        <ThumbsUp aria-hidden="true" className="h-4 w-4" />✓
+      </button>
+      <button onClick={() => send(false)} disabled={state?.sending} className="btn-ghost px-2.5 py-1" aria-label="Wrong">
+        <ThumbsDown aria-hidden="true" className="h-4 w-4" />✗
+      </button>
+      {state?.sending && <span className="text-muted">sending…</span>}
+      {state?.text && <span className={state.ok ? 'text-pass-fg' : 'text-stop-fg'}>{state.text}</span>}
     </span>
   )
 }
