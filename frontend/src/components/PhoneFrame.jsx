@@ -1,22 +1,26 @@
-// PhoneFrame — the customer's "SatyaBank" phone: phone-shaped frame on a laptop, full screen on a
-// real phone. Used by the customer app and its sign-in page. `right` = header slot (Sign out).
-import { ShieldIcon } from './Icons'
-import ReduceEffectsToggle from './ReduceEffectsToggle'
+// PhoneFrame — the customer's "SatyaBank" mobile banking app: a light phone in a dark bezel on a
+// laptop, full screen on a real phone. Used by the customer app and its sign-in page.
+// `right` = header slot (Sign out), `footer` = bottom tab bar. No background effects here.
+import { Toaster } from 'sonner'
+import { LogoMark } from './Icons'
 
-export default function PhoneFrame({ right, children }) {
+export default function PhoneFrame({ right, footer, children }) {
   return (
-    <div className="min-h-screen text-ink sm:py-8">
-      {/* Phone frame (laptop only): dark bezel, notch, a faint diagonal reflection. */}
-      <div className="phone mx-auto flex min-h-screen max-w-[420px] flex-col sm:min-h-[780px] sm:overflow-hidden sm:rounded-[2.5rem] sm:border-[10px] sm:border-[#1a2238] sm:shadow-[0_0_0_1px_rgb(255_255_255/0.08),0_40px_120px_-30px_rgb(109_93_252/0.45)]">
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 hidden bg-[linear-gradient(125deg,rgb(255_255_255/0.07)_0%,transparent_35%)] sm:block" />
-        <div aria-hidden="true" className="mx-auto hidden h-6 w-32 rounded-b-2xl bg-[#1a2238] sm:block" />
-        <header className="relative flex items-center gap-2 px-5 pb-3 pt-4">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-stamp/20 text-stamp glow-stamp"><ShieldIcon className="h-5 w-5" /></span>
-          <p className="text-glow text-2xl font-bold tracking-tight font-stretch-expanded">SatyaBank</p>
-          <div className="ml-auto flex items-center gap-2"><ReduceEffectsToggle />{right}</div>
+    <div className="theme-light min-h-screen bg-[#e4e9f2] sm:bg-[radial-gradient(60%_50%_at_50%_0%,#ffffff_0%,#e4e9f2_70%)] sm:py-8">
+      <div className="relative mx-auto flex min-h-screen max-w-[420px] flex-col bg-mist sm:h-[min(840px,calc(100vh-4rem))] sm:min-h-0 sm:overflow-hidden sm:rounded-[3rem] sm:border-[12px] sm:border-navy sm:shadow-[0_40px_90px_-30px_rgb(11_31_58/0.55),0_0_0_1px_rgb(11_31_58/0.4)]">
+        {/* Notch (laptop only). */}
+        <div aria-hidden="true" className="absolute left-1/2 top-0 z-20 hidden h-6 w-32 -translate-x-1/2 rounded-b-2xl bg-navy sm:block" />
+
+        <header className="relative z-10 flex items-center gap-2.5 border-b border-line bg-white px-5 pb-3 pt-4 sm:pt-8">
+          <LogoMark className="h-9 w-9" />
+          <p className="font-display text-xl font-extrabold tracking-tight text-navy">SatyaBank</p>
+          <div className="ml-auto flex items-center gap-2">{right}</div>
         </header>
-        {children}
+
+        <div className="flex-1 overflow-y-auto">{children}</div>
+        {footer}
       </div>
+      <Toaster theme="light" position="top-center" richColors closeButton toastOptions={{ style: { fontSize: '16px' } }} />
     </div>
   )
 }

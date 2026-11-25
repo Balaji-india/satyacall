@@ -1,16 +1,19 @@
-// Entry point: BrowserRouter enables the /call, /agent, /app, /enroll routes.
+// Entry point: BrowserRouter enables the routes; MotionConfig makes every motion animation
+// respect the OS "reduce motion" setting. The agent desk's background (CyberBackground) and each
+// device's toasts (sonner) live in that device's layout, so the customer phone stays plain.
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
+import { MotionConfig } from 'motion/react'
 import './index.css'
 import App from './App.jsx'
-import CyberBackground from './components/CyberBackground.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <CyberBackground />
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
+    <MotionConfig reducedMotion="user">
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </MotionConfig>
   </StrictMode>,
 )

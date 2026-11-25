@@ -6,7 +6,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { enrollPerson, errorCode, errorText, listPeople } from '../api'
+import { AlertTriangle, CheckCircle2, Fingerprint, Info, Mic, Square, Upload, UserPlus } from 'lucide-react'
 import PeopleList from '../components/PeopleList'
+import { Reveal } from '../components/Tone'
 import { LOGIN_PATH } from '../session'
 import { useMicRecorder } from '../useMicRecorder'
 
@@ -111,119 +113,126 @@ export default function EnrollPage({ signup }) {
   }
 
   const busy = mic.starting || mic.recording || submitting
-  const input = 'w-full rounded border px-2 py-1'
+  const input = 'field mt-1.5'
 
   return (
-    <section className="glass space-y-6 p-6">
+    <section className="card mx-auto max-w-5xl space-y-6 p-6">
       {signup ? (
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold">{signup === 'agent' ? 'Create a staff account' : 'Create your SatyaBank account'}</h1>
-          <p className="text-slate-600">Your voice sample becomes your account's voice ID (~200 credits).</p>
+          <h1 className="text-2xl font-bold">{signup === 'agent' ? 'Create a staff account' : 'Create your SatyaBank account'}</h1>
+          <p className="text-base text-muted">Your voice sample becomes your account's voice ID (~200 credits).</p>
         </div>
       ) : (
-        <h1 className="text-2xl font-semibold">Enroll a voice</h1>
+        <div className="space-y-1">
+          <h1 className="flex items-center gap-2 text-2xl font-bold"><UserPlus aria-hidden="true" className="h-6 w-6 text-tide" />Enroll a voice</h1>
+          <p className="text-base text-muted">Register a customer's or agent's voice with DetectifAI Eidos.</p>
+        </div>
       )}
 
-      <form onSubmit={submit} className="grid gap-4 md:grid-cols-2">
+      <form onSubmit={submit} className="grid gap-6 md:grid-cols-2">
         {/* Who */}
-        <fieldset className="space-y-2 text-sm" disabled={busy}>
-          <label className="block">Display name
-            <input value={form.display_name} onChange={setName} placeholder="Balaji Keerthi" className={input} />
+        <fieldset className="space-y-4 text-base" disabled={busy}>
+          <legend className="mb-2 text-lg font-semibold">Who</legend>
+          <label className="label block">Display name
+            <input value={form.display_name} onChange={setName} placeholder="e.g. Balaji Keerthi" className={input} />
           </label>
-          <label className="block">person_id <span className="text-slate-500">(from the name, editable)</span>
-            <input value={form.person_id} placeholder="balaji" className={`${input} font-mono`}
+          <label className="label block">person_id <span className="font-normal">(from the name, editable)</span>
+            <input value={form.person_id} placeholder="e.g. balaji" className={`${input} font-mono`}
               onChange={(e) => { setIdEdited(true); set('person_id')(e) }} />
           </label>
-          <div className="flex gap-4" hidden={!!signup}>
+          <div className="flex gap-2" hidden={!!signup} role="radiogroup" aria-label="Role">
             {['customer', 'agent'].map((r) => (
-              <label key={r} className="flex items-center gap-1">
-                <input type="radio" name="role" value={r} checked={form.role === r} onChange={set('role')} /> {r}
+              <label key={r} className={`flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2.5 font-semibold capitalize ${form.role === r ? 'border-stamp bg-stamp/15' : 'border-line'}`}>
+                <input type="radio" name="role" value={r} checked={form.role === r} onChange={set('role')} className="accent-[#4f46e5]" /> {r}
               </label>
             ))}
           </div>
           {isAgent ? (
             <>
-              <label className="block">Employee id
-                <input value={form.employee_id} onChange={set('employee_id')} placeholder="4521" className={input} />
+              <label className="label block">Employee ID
+                <input value={form.employee_id} onChange={set('employee_id')} placeholder="e.g. 4521" className={`${input} font-mono`} />
               </label>
-              <label className="block">Department
-                <input value={form.department} onChange={set('department')} placeholder="Card Services" className={input} />
+              <label className="label block">Department
+                <input value={form.department} onChange={set('department')} placeholder="e.g. Card Services" className={input} />
               </label>
             </>
           ) : (
-            <label className="block">Phone (registered number)
-              <input value={form.phone} onChange={set('phone')} type="tel" placeholder="+91…" className={input} />
+            <label className="label block">Phone (registered number)
+              <input value={form.phone} onChange={set('phone')} type="tel" placeholder="e.g. +91…" className={`${input} font-mono`} />
             </label>
           )}
         </fieldset>
 
         {/* Voice sample */}
-        <div className="space-y-2 text-sm">
-          <p className="text-slate-600">
-            Voice sample: {MIN_SECONDS}–{MAX_SECONDS} s with at least 10 s of speech. Read anything aloud, naturally, for the whole time.
+        <div className="space-y-4 text-base">
+          <p className="text-lg font-semibold">Voice sample</p>
+          <p className="text-muted">
+            {MIN_SECONDS}–{MAX_SECONDS} s with at least 10 s of speech. Read anything aloud, naturally, for the whole time.
           </p>
           <div className="flex flex-wrap items-center gap-2">
             {!mic.recording ? (
-              <button type="button" onClick={mic.start} disabled={submitting || mic.starting}
-                className="btn-primary px-4 py-2 disabled:opacity-40">
+              <button type="button" onClick={mic.start} disabled={submitting || mic.starting} className="btn-primary px-4 py-2.5">
+                <Mic aria-hidden="true" className="h-4 w-4" />
                 {mic.starting ? 'Opening microphone…' : audio ? 'Record again' : `Record ${RECORD_SECONDS} s`}
               </button>
             ) : (
-              <button type="button" onClick={mic.stop} className="rounded bg-red-600 px-4 py-2 text-white">
-                Stop early
+              <button type="button" onClick={mic.stop} className="inline-flex items-center gap-2 rounded-xl bg-stop px-4 py-2.5 font-semibold text-white">
+                <Square aria-hidden="true" className="h-4 w-4" />Stop early
               </button>
             )}
-            <label className={`cursor-pointer rounded border px-4 py-2 ${busy ? 'pointer-events-none opacity-40' : ''}`}>
-              Choose audio file
+            <label className={`btn-ghost cursor-pointer px-4 py-2.5 ${busy ? 'pointer-events-none opacity-40' : ''}`}>
+              <Upload aria-hidden="true" className="h-4 w-4" />Choose audio file
               <input type="file" accept="audio/*,.wav,.m4a,.mp3,.webm" onChange={chooseFile} className="hidden" />
             </label>
           </div>
 
           {mic.recording && (
-            <p className={`rounded p-2 text-center font-semibold text-white ${mic.elapsed < MIN_SECONDS ? 'bg-amber-600' : 'bg-pass'}`}>
-              ● Recording… {RECORD_SECONDS - mic.elapsed} s left
+            <p className={`rec-ring rounded-xl p-3 text-center font-semibold text-white ${mic.elapsed < MIN_SECONDS ? 'bg-[#b45309]' : 'bg-pass'}`}>
+              ● Recording… <span className="font-mono">{RECORD_SECONDS - mic.elapsed} s</span> left
               {mic.elapsed < MIN_SECONDS && ` (stopping now gives only ${mic.elapsed} s — under ${MIN_SECONDS} s)`}
             </p>
           )}
-          {mic.error && <p className="rounded bg-red-50 p-2 text-red-700">{mic.error}</p>}
+          {mic.error && <p role="alert" className="rounded-xl border border-stop/40 bg-stop/10 p-3 text-stop-fg">{mic.error}</p>}
 
           {audio && (
-            <div className="space-y-1 rounded border p-2">
-              <p>{audio.source === 'recorded' ? 'Recorded' : audio.filename} · {audio.seconds != null ? `${audio.seconds} s` : 'length unknown'}</p>
+            <div className="space-y-2 rounded-xl border border-line bg-inset p-3">
+              <p>{audio.source === 'recorded' ? 'Recorded' : audio.filename} · <span className="font-mono">{audio.seconds != null ? `${audio.seconds} s` : 'length unknown'}</span></p>
               <audio controls src={audio.url} className="w-full" />
               {lengthWarning && (
-                <p className="text-amber-700">
-                  ⚠ {audio.seconds} s is outside {MIN_SECONDS}–{MAX_SECONDS} s — DetectifAI will likely reject it. Record again.
+                <p className="flex items-start gap-2 text-warn-fg">
+                  <AlertTriangle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
+                  {audio.seconds} s is outside {MIN_SECONDS}–{MAX_SECONDS} s — DetectifAI will likely reject it. Record again.
                 </p>
               )}
             </div>
           )}
 
-          <button disabled={busy || missing || !audio}
-            className="w-full rounded bg-blue-700 px-4 py-2 font-semibold text-white disabled:opacity-40">
+          <button disabled={busy || missing || !audio} className="btn-primary w-full px-4 py-3 text-lg">
+            <Fingerprint aria-hidden="true" className="h-5 w-5" />
             {submitting ? 'Enrolling…' : 'Enroll voice (uses ~200 credits)'}
           </button>
-          {missing && <p className="text-slate-500">Fill in name, person_id and {isAgent ? 'employee id + department' : 'phone'}.</p>}
+          {missing && <p className="text-[15px] text-muted">Fill in name, person_id and {isAgent ? 'employee ID + department' : 'phone'}.</p>}
 
           {error && (
-            <div className="rounded bg-red-50 p-2 text-red-700">
-              <p>Enrollment failed — {error.text}</p>
+            <Reveal className="space-y-1 rounded-xl border border-stop/40 bg-stop/10 p-3 text-stop-fg">
+              <p className="break-words">Enrollment failed — {error.text}</p>
               {error.hint && <p className="font-semibold">{error.hint}</p>}
-            </div>
+            </Reveal>
           )}
           {result && (
-            <div className="rounded border-2 border-green-600 bg-green-50 p-2">
-              <p className="font-semibold text-green-800">✓ Enrolled {result.person_id}</p>
-              <p>speaker_id <span className="font-mono">{result.speaker_id}</span> · samples {result.samples ?? '—'} · speech {result.speech_seconds ?? '—'} s</p>
+            <Reveal className="space-y-1 rounded-xl border border-pass/50 bg-pass/10 p-3">
+              <p className="flex items-center gap-2 font-semibold text-pass-fg"><CheckCircle2 aria-hidden="true" className="h-5 w-5" />Enrolled {result.person_id}</p>
+              <p className="font-mono text-[15px]">speaker_id {result.speaker_id} · samples {result.samples ?? '—'} · speech {result.speech_seconds ?? '—'} s</p>
               {signup
-                ? <p><Link to={LOGIN_PATH[signup]} className="font-semibold text-tide underline">Account created — sign in now</Link></p>
-                : <p className="text-slate-600">Next step: test it on a call. Add a second sample only if credits allow.</p>}
-            </div>
+                ? <p><Link to={LOGIN_PATH[signup]} className="font-semibold text-stamp underline underline-offset-2 [.theme-dark_&]:text-tide">Account created — sign in now</Link></p>
+                : <p className="text-muted">Next step: test it on a call. Add a second sample only if credits allow.</p>}
+            </Reveal>
           )}
         </div>
       </form>
 
-      <p className="rounded bg-slate-50 p-2 text-sm text-slate-600">
+      <p className="flex items-start gap-2 rounded-xl border border-line bg-inset p-3 text-[15px] text-muted">
+        <Info aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
         Each sample costs 200 credits. Add a second sample (recorded over a call or on another device) only if credits allow.
       </p>
 

@@ -1,209 +1,176 @@
 @import "tailwindcss";
 
-/* SatyaCall — "the voice trust layer". A security console for a projector: slate-navy (lifted
-   so it does not go muddy on a projector), a slow indigo/teal aurora, a decorative "cyber" layer
-   (CyberBackground.jsx: grid, scan line, network, hex streams, waveform), glass cards. The verdict colours are the only loud
-   things on screen, and each one glows: green = real / match / approved / verified,
-   amber = mixed / retry / unavailable, red = fake / no match / fallback, grey = skipped. */
+/* SatyaCall — two devices that look different on purpose.
+   CUSTOMER PHONE (.theme-light): "SatyaBank" mobile banking app — mist background, white cards,
+   navy text, indigo buttons, teal highlights.
+   AGENT DESK (.theme-dark): security console — navy background, #13294B panels, subtle borders,
+   indigo/teal accents, the only place with (very subtle) background effects.
+   Verdict colours are identical on both and always come with an icon + a word:
+   pass = real / match / approved · warn = retry / mixed / unavailable · stop = AI / no match /
+   fallback · skip = skipped. */
 @theme {
-  --font-sans: "Anek Latin", ui-sans-serif, system-ui, sans-serif;
-  --color-paper: #1e2a44;  /* page background (slate-navy) */
-  --color-night: #2b3b5c;  /* lower end of the background gradient, dropdown menus */
-  --color-ink: #e6ebf5;    /* main text (light on dark) */
-  --color-stamp: #6d5dfc;  /* brand + primary buttons, indigo */
-  --color-tide: #2dd4bf;   /* teal accent (aurora, waveform) */
-  /* Same three hexes as the trust timeline bars, so bars, badges and cards always agree. */
-  --color-pass: #0ca30c;
-  --color-warn: #fab219;
-  --color-stop: #d03b3b;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
 
-  /* Dark skin: older components still use Tailwind's light-theme shades (bg-red-50,
-     text-slate-600, …). Rather than rewrite each one, those shades point to their dark
-     equivalents here: pale tints become low-opacity glass, dark text shades become light. */
-  --color-slate-50: rgb(255 255 255 / 0.06);
-  --color-slate-100: rgb(255 255 255 / 0.1);
-  --color-slate-500: #c3cddb;
-  --color-slate-600: #d3dbe6;
-  --color-slate-700: #e0e6ee;
-  --color-slate-800: #eef2f7;
-  --color-red-50: rgb(208 59 59 / 0.16);
-  --color-red-100: rgb(208 59 59 / 0.24);
-  --color-red-700: #fca5a5;
-  --color-red-800: #fecaca;
-  --color-green-50: rgb(12 163 12 / 0.16);
-  --color-green-100: rgb(12 163 12 / 0.24);
-  --color-green-700: #86efac;
-  --color-green-800: #bbf7d0;
-  --color-amber-700: #fcd34d;
+  --color-navy: #0b1f3a;   /* customer text, agent background */
+  --color-panel: #13294b;  /* agent panels */
+  --color-mist: #f5f7fb;   /* customer background */
+  --color-stamp: #4f46e5;  /* indigo: brand + primary buttons */
+  --color-tide: #14b8a6;   /* teal highlight */
 
+  /* Same four hexes on both devices and in the trust timeline bars. */
+  --color-pass: #16a34a;
+  --color-warn: #f59e0b;
+  --color-stop: #dc2626;
+  --color-skip: #94a3b8;
+}
+
+/* Theme-aware colours: shared components (call panel, forms, enrolment) use these names and
+   pick up the light or dark values from the nearest .theme-light / .theme-dark wrapper. */
+@theme inline {
+  --color-surface: var(--surface);    /* cards / panels */
+  --color-inset: var(--inset);        /* wells inside a card */
+  --color-fg: var(--fg);              /* main text */
+  --color-muted: var(--muted);        /* secondary text (still projector-readable) */
+  --color-line: var(--line);          /* borders */
+  --color-field: var(--field);        /* inputs */
+  --color-pass-fg: var(--pass-fg);    /* verdict colours as TEXT, tuned for contrast per theme */
+  --color-warn-fg: var(--warn-fg);
+  --color-stop-fg: var(--stop-fg);
+  --color-skip-fg: var(--skip-fg);
+}
+
+.theme-light {
+  --surface: #ffffff; --inset: #f5f7fb; --fg: #0b1f3a; --muted: #4a5873;
+  --line: #dfe5ee; --field: #ffffff;
+  --pass-fg: #15803d; --warn-fg: #b45309; --stop-fg: #b91c1c; --skip-fg: #556274;
+  color: var(--fg); color-scheme: light;
+}
+.theme-dark {
+  --surface: #13294b; --inset: #0e2240; --fg: #f1f5f9; --muted: #aebbd0;
+  --line: rgb(255 255 255 / 0.1); --field: #0e2240;
+  --pass-fg: #4ade80; --warn-fg: #fbbf24; --stop-fg: #f87171; --skip-fg: #a7b4c6;
+  color: var(--fg); color-scheme: dark;
 }
 
 @layer base {
-  html { background: var(--color-paper); color-scheme: dark; }
-  body { color: var(--color-ink); min-height: 100vh; }
-  *, ::before, ::after { border-color: rgb(255 255 255 / 0.15); }
-  input, select, textarea {
-    background-color: rgb(255 255 255 / 0.08);
-    color: inherit;
+  html { background: var(--color-navy); -webkit-font-smoothing: antialiased; }
+  body { min-height: 100vh; font-size: 1rem; line-height: 1.5; }
+  h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.015em; }
+  *, ::before, ::after { border-color: var(--line, rgb(255 255 255 / 0.1)); }
+  input, select, textarea { background-color: var(--field); color: inherit; }
+  input::placeholder { color: var(--muted); opacity: 0.6; }
+  option { background: var(--field); color: var(--fg); }
+  :focus-visible { outline: 3px solid var(--color-tide); outline-offset: 2px; }
+}
+
+@layer components {
+  /* Agent desk panel / customer card: one surface style, theme-aware. */
+  .card {
+    border-radius: 1rem;
+    border: 1px solid var(--line);
+    background: var(--surface);
   }
-  input::placeholder { color: rgb(255 255 255 / 0.5); }
-  option { background: var(--color-night); color: var(--color-ink); }
-  :focus-visible { outline-color: var(--color-tide); }
+  .theme-light .card { box-shadow: 0 1px 2px rgb(11 31 58 / 0.05), 0 8px 24px -12px rgb(11 31 58 / 0.12); }
+  .theme-dark .card { box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04); }
+
+  .field {
+    width: 100%;
+    border-radius: 0.75rem;
+    border: 1px solid var(--line);
+    background: var(--field);
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+  }
+  .theme-light .field { border-color: #c9d2df; }
+  .field:disabled { opacity: 0.55; }
+
+  .btn-primary {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+    border-radius: 0.75rem;
+    background: var(--color-stamp);
+    color: white;
+    font-weight: 600;
+    transition: background-color 150ms, opacity 150ms;
+  }
+  .btn-primary:hover:not(:disabled) { background: #4338ca; }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .btn-ghost {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--line);
+    background: var(--inset);
+    font-weight: 600;
+    transition: background-color 150ms, opacity 150ms;
+  }
+  .btn-ghost:hover:not(:disabled) { filter: brightness(0.97); }
+  .theme-dark .btn-ghost:hover:not(:disabled) { filter: brightness(1.25); }
+  .btn-ghost:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Small label above a value (sentence case, not tracked caps). */
+  .label { font-size: 0.875rem; font-weight: 500; color: var(--muted); }
+
+  /* Say-It-Back sentence: quote card with an indigo→teal edge. */
+  .quote-card {
+    border: 2px solid transparent;
+    border-radius: 1rem;
+    background:
+      linear-gradient(var(--inset), var(--inset)) padding-box,
+      linear-gradient(120deg, var(--color-stamp), var(--color-tide)) border-box;
+  }
 }
 
-/* Background: slate-navy gradient + two slow aurora blobs (fixed, behind everything).
-   The grid, scan line, network, hex streams and waveform live in CyberBackground.jsx (.cyber-*). */
-body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; }
-body::before {
+/* Agent desk background: navy with two faint indigo/teal glows (fixed, behind everything). */
+.desk-bg { position: relative; isolation: isolate; background: var(--color-navy); }
+.desk-bg::before {
+  content: ""; position: fixed; inset: 0; z-index: -2; pointer-events: none;
   background:
-    radial-gradient(40% 35% at 20% 15%, rgb(109 93 252 / 0.24), transparent 70%),
-    radial-gradient(35% 30% at 85% 75%, rgb(45 212 191 / 0.16), transparent 70%),
-    linear-gradient(180deg, #1e2a44 0%, #2b3b5c 100%);
-  background-size: 140% 140%, 140% 140%, 100% 100%;
+    radial-gradient(45% 40% at 15% 0%, rgb(79 70 229 / 0.16), transparent 70%),
+    radial-gradient(40% 35% at 90% 100%, rgb(20 184 166 / 0.09), transparent 70%);
 }
 
-/* Cyber layer: fixed, below all content, never catches clicks. Each piece is 0.15–0.3 opacity. */
+/* Cyber layer (agent desk only, CyberBackground.jsx): fixed, under the content, never clickable.
+   Kept very faint so it never competes with a verdict. */
 .cyber { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
 .cyber-grid-wrap {
-  position: absolute; inset: 40% -20% 0; perspective: 420px; perspective-origin: 50% 0%;
-  opacity: 0.25;
-  mask-image: linear-gradient(180deg, transparent, black 45%);
+  position: absolute; inset: 55% -20% 0; perspective: 420px; perspective-origin: 50% 0%;
+  opacity: 0.12;
+  mask-image: linear-gradient(180deg, transparent, black 60%);
 }
 .cyber-grid {
   position: absolute; inset: -100% 0 0; transform-origin: 50% 100%;
   transform: rotateX(62deg);
   background-image:
-    linear-gradient(rgb(34 211 238 / 0.55) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(109 93 252 / 0.55) 1px, transparent 1px);
+    linear-gradient(rgb(20 184 166 / 0.6) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(79 70 229 / 0.6) 1px, transparent 1px);
   background-size: 48px 48px;
 }
-.cyber-scan {
-  position: absolute; left: 0; right: 0; top: 0; height: 90px; opacity: 0.2;
-  background: linear-gradient(180deg, transparent, rgb(34 211 238 / 0.35) 85%, rgb(165 243 252 / 0.9) 100%);
-  transform: translateY(-100px);
-}
-.cyber-net { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.22; }
+.cyber-net { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.08; }
 .cyber-net line { stroke: #818cf8; stroke-width: 1; }
-.cyber-net circle { fill: #67e8f9; }
-.cyber-stream {
-  position: absolute; top: 0; height: 200%; opacity: 0.18;
-  font: 12px/1.9 ui-monospace, SFMono-Regular, Consolas, monospace; color: #67e8f9;
-  mask-image: linear-gradient(180deg, transparent, black 15%, black 85%, transparent);
-}
-.cyber-stream pre { margin: 0; height: 50%; overflow: hidden; }
-.cyber-wave { position: absolute; left: 0; bottom: 0; width: 200%; height: 80px; opacity: 0.28; }
-.cyber-wave path { fill: none; stroke-width: 2; }
-.cyber-wave-a path { stroke: #22d3ee; }
-.cyber-wave-b path { stroke: #818cf8; }
-.cyber-wave-a, .cyber-wave-b { transform-origin: 50% 50%; }
-@media (max-width: 640px) { .cyber-stream { display: none; } }
+.cyber-net circle { fill: #5eead4; }
 
 /* Calm mode (body.calm, see effects.js): during a call / recording, or "Reduce effects".
-   Background animation is paused and blur is dropped, so the call audio gets the CPU/GPU. */
-body.calm::before, body.calm .cyber *, body.calm .radar::before { animation-play-state: paused !important; }
-body.calm .glass, body.calm [class*="backdrop-blur"] { backdrop-filter: none !important; }
+   Background animation is paused and the cyber layer fades out, so the call audio gets the CPU. */
+body.calm .cyber * { animation-play-state: paused !important; }
+body.calm .cyber { opacity: 0.4; }
 
-/* Radar sweep behind the trust timeline card (put .radar on the card). A circle rotates in
-   place, so it never leaves its box and the chart tooltip is not clipped. */
-.radar { position: relative; isolation: isolate; }
-.radar::before {
-  content: ""; position: absolute; z-index: -1; pointer-events: none;
-  top: 8%; right: 3%; height: 84%; aspect-ratio: 1; border-radius: 50%; opacity: 0.22;
-  background:
-    conic-gradient(from 0deg, rgb(34 211 238 / 0.7), rgb(34 211 238 / 0) 22%, transparent),
-    repeating-radial-gradient(circle, transparent 0 18%, rgb(129 140 248 / 0.6) 18.5% 19%);
-}
-
-@layer components {
-  /* Glass card: the one card style. Inner top highlight gives the "soft inner glow". */
-  .glass {
-    border-radius: 1rem;
-    border: 1px solid rgb(255 255 255 / 0.15);
-    background: rgb(255 255 255 / 0.1);
-    backdrop-filter: blur(14px);
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08), 0 20px 50px -24px rgb(0 0 0 / 0.6);
-  }
-  .btn-primary {
-    border-radius: 0.75rem;
-    background: linear-gradient(135deg, #6d5dfc, #4f46e5);
-    color: white;
-    font-weight: 600;
-    box-shadow: 0 0 24px -6px rgb(109 93 252 / 0.7);
-  }
-
-  /* Say-It-Back sentence: quote card with a gradient border (animated below). */
-  .quote-card {
-    border: 2px solid transparent;
-    border-radius: 1rem;
-    background:
-      linear-gradient(#1b2642, #1b2642) padding-box,
-      linear-gradient(120deg, #6d5dfc, #2dd4bf, #6d5dfc) border-box;
-    background-size: 100% 100%, 200% 200%;
-  }
-
-  /* Voice waveform bars on the start page (decoration only, no data). */
-  .wave { display: flex; align-items: center; gap: 6px; height: 64px; }
-  .wave span {
-    width: 6px; height: 100%; border-radius: 3px;
-    background: linear-gradient(180deg, #2dd4bf, #6d5dfc);
-    transform: scaleY(0.3);
-  }
-
-  /* Check mark that draws itself (approved / verified). */
-  .check-draw path { stroke-dasharray: 30; stroke-dashoffset: 0; }
-
-  /* Customer phone frame. */
-  .phone {
-    position: relative;
-    background: linear-gradient(180deg, #223152, #1b2742);
-  }
-}
-
-/* Soft glow in a verdict colour. @utility (not a plain class) so hover:glow-* works too. */
-@utility glow-pass { box-shadow: 0 0 32px -6px rgb(12 163 12 / 0.75); }
-@utility glow-warn { box-shadow: 0 0 32px -6px rgb(250 178 25 / 0.7); }
-@utility glow-stop { box-shadow: 0 0 36px -6px rgb(208 59 59 / 0.85); }
-@utility glow-stamp { box-shadow: 0 0 36px -8px rgb(109 93 252 / 0.85); }
-@utility text-glow { text-shadow: 0 0 18px rgb(109 93 252 / 0.6); }
-
-@keyframes live { 0% { box-shadow: 0 0 0 0 rgb(208 59 59 / 0.7); } 100% { box-shadow: 0 0 0 10px rgb(208 59 59 / 0); } }
-@keyframes aurora { 0%, 100% { background-position: 0% 0%, 100% 100%, 0 0; } 50% { background-position: 60% 40%, 40% 60%, 0 0; } }
-@keyframes wave { 0%, 100% { transform: scaleY(0.3); } 50% { transform: scaleY(1); } }
-@keyframes border-flow { 0% { background-position: 0 0, 0% 50%; } 100% { background-position: 0 0, 200% 50%; } }
-@keyframes ring { 0% { box-shadow: 0 0 0 0 rgb(208 59 59 / 0.6); } 100% { box-shadow: 0 0 0 18px rgb(208 59 59 / 0); } }
-@keyframes draw { from { stroke-dashoffset: 30; } to { stroke-dashoffset: 0; } }
-@keyframes pop { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-@keyframes alert-glow { 0%, 100% { box-shadow: 0 0 24px -8px rgb(208 59 59 / 0.7); } 50% { box-shadow: 0 0 44px -4px rgb(208 59 59 / 1); } }
+@keyframes live { 0% { box-shadow: 0 0 0 0 rgb(220 38 38 / 0.6); } 100% { box-shadow: 0 0 0 8px rgb(220 38 38 / 0); } }
+@keyframes ring { 0% { box-shadow: 0 0 0 0 rgb(220 38 38 / 0.5); } 100% { box-shadow: 0 0 0 14px rgb(220 38 38 / 0); } }
 @keyframes grid-move { from { transform: rotateX(62deg) translateY(0); } to { transform: rotateX(62deg) translateY(48px); } }
-@keyframes scan { from { transform: translateY(-100px); } to { transform: translateY(100vh); } }
-@keyframes drift-a { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(40px, 25px); } }
-@keyframes drift-b { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-35px, 30px); } }
-@keyframes drift-c { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(30px, -25px); } }
-@keyframes stream-fall { from { transform: translateY(-50%); } to { transform: translateY(0); } }
-@keyframes wave-slide { from { transform: translateX(0); } to { transform: translateX(-1200px); } }
-@keyframes wave-pulse { 0%, 100% { opacity: 0.6; transform: translateX(0) scaleY(0.7); } 50% { opacity: 1; transform: translateX(-600px) scaleY(1.15); } }
-@keyframes radar-spin { to { transform: rotate(360deg); } }
-@keyframes rise { from { transform: translateY(6px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes drift-a { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(30px, 20px); } }
+@keyframes drift-b { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-25px, 22px); } }
+@keyframes drift-c { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(22px, -18px); } }
+@keyframes pulse-soft { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
 
 /* All motion is opt-in: nothing moves for people who asked for reduced motion. */
 @media (prefers-reduced-motion: no-preference) {
-  body::before { animation: aurora 24s ease-in-out infinite; }
-  .wave span { animation: wave 1.2s ease-in-out infinite; }
   .live-dot { animation: live 1.6s ease-out infinite; }
-  .quote-card { animation: border-flow 4s linear infinite; }
   .rec-ring { animation: ring 1.2s ease-out infinite; }
-  .check-draw { animation: pop 300ms ease-out; }
-  .check-draw path { animation: draw 600ms 150ms ease-out both; }
-  .alert-pulse { animation: alert-glow 2.4s ease-in-out infinite; }
-  .badge-in { animation: rise 260ms ease-out; }
-  .cyber-grid { animation: grid-move 6s linear infinite; }
-  .cyber-scan { animation: scan 9s linear infinite; }
-  .cyber-cluster-0 { animation: drift-a 26s ease-in-out infinite; }
-  .cyber-cluster-1 { animation: drift-b 32s ease-in-out infinite; }
-  .cyber-cluster-2 { animation: drift-c 29s ease-in-out infinite; }
-  .cyber-stream-slow { animation: stream-fall 40s linear infinite; }
-  .cyber-stream-fast { animation: stream-fall 28s linear infinite; }
-  .cyber-wave-a { animation: wave-slide 18s linear infinite; }
-  .cyber-wave-b { animation: wave-pulse 7s ease-in-out infinite; }
-  .radar::before { animation: radar-spin 8s linear infinite; }
+  .ringing { animation: pulse-soft 1.2s ease-in-out infinite; }
+  .cyber-grid { animation: grid-move 8s linear infinite; }
+  .cyber-cluster-0 { animation: drift-a 30s ease-in-out infinite; }
+  .cyber-cluster-1 { animation: drift-b 36s ease-in-out infinite; }
+  .cyber-cluster-2 { animation: drift-c 33s ease-in-out infinite; }
 }

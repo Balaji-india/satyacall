@@ -1,13 +1,15 @@
-// "Reduce effects" switch for the agent and customer headers: keeps calm mode on (see effects.js).
+// "Reduce effects" switch for the agent desk header: keeps calm mode on (see effects.js).
+import { Sparkles } from 'lucide-react'
 import { useReduceEffects } from '../effects'
 
 export default function ReduceEffectsToggle() {
   const [on, toggle] = useReduceEffects()
   return (
     <button type="button" onClick={toggle} aria-pressed={on}
-      title="Stops background animation and blur so the call and recording run smoother"
-      className={`rounded-lg border px-2 py-1 text-sm ${on ? 'border-tide/60 bg-tide/15 text-white' : 'text-white/70 hover:text-white'}`}>
-      {on ? 'Effects: reduced' : 'Reduce effects'}
+      title="Stops background animation so the call and recording run smoother"
+      className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-[15px] font-medium transition-colors ${on ? 'border-tide/60 bg-tide/15 text-white' : 'border-line text-muted hover:text-white'}`}>
+      <Sparkles aria-hidden="true" className="h-4 w-4" />
+      {on ? 'Effects reduced' : 'Reduce effects'}
     </button>
   )
 }

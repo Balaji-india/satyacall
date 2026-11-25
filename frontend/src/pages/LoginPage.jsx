@@ -6,11 +6,13 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { errorText, listPeople } from '../api'
-import { DeskIcon, ShieldIcon } from '../components/Icons'
+import { ArrowLeft, CloudOff, LogIn, MonitorSmartphone, RotateCw } from 'lucide-react'
+import CyberBackground from '../components/CyberBackground'
+import { LogoMark } from '../components/Icons'
 import PhoneFrame from '../components/PhoneFrame'
 import { checkDemoPassword, HOME_PATH, saveSession } from '../session'
 
-const FIELD = 'w-full rounded-xl border px-4 py-3 text-lg'
+const FIELD = 'field text-lg'
 
 export default function LoginPage({ role }) {
   const isAgent = role === 'agent'
@@ -53,10 +55,10 @@ export default function LoginPage({ role }) {
   }
 
   const form = (
-    <form onSubmit={submit} className="space-y-4">
-      <div className="space-y-1">
-        <label htmlFor="who" className="block text-sm font-medium">{isAgent ? 'Employee ID' : 'Your name'}</label>
-        {people === null && <p className="text-sm text-slate-500">Loading {isAgent ? 'staff' : 'customers'}…</p>}
+    <form onSubmit={submit} className="space-y-5">
+      <div className="space-y-1.5">
+        <label htmlFor="who" className="label block">{isAgent ? 'Employee ID' : 'Your name'}</label>
+        {people === null && <p className="text-base text-muted">Loading {isAgent ? 'staff' : 'customers'}…</p>}
         {people?.length > 0 && (
           <select id="who" value={chosen} onChange={(e) => { setChosen(e.target.value); setError('') }}
             disabled={checking} className={FIELD}>
@@ -68,33 +70,43 @@ export default function LoginPage({ role }) {
             ))}
           </select>
         )}
-        {people?.length === 0 && (
-          <div className="rounded-xl bg-red-50 p-3 text-sm text-red-700">
-            {peopleError
-              ? <>Could not load the list — {peopleError}. <button type="button" onClick={retry} className="underline">Retry</button></>
-              : <>Nobody is enrolled as {isAgent ? 'staff with an employee ID' : 'a customer'} yet — create an account below.</>}
+        {people?.length === 0 && (peopleError ? (
+          // Backend unreachable (or erroring): say so plainly, show its message, offer Retry.
+          <div role="status" className="space-y-2 rounded-xl border border-warn/50 bg-warn/10 p-3">
+            <p className="flex items-center gap-2 font-semibold text-warn-fg">
+              <CloudOff aria-hidden="true" className="h-5 w-5 shrink-0" />
+              Can't load the {isAgent ? 'staff' : 'customer'} list
+            </p>
+            <p className="break-words text-[15px]">{peopleError}</p>
+            <button type="button" onClick={retry} className="btn-ghost px-3 py-1.5 text-[15px]">
+              <RotateCw aria-hidden="true" className="h-4 w-4" />Retry
+            </button>
           </div>
-        )}
+        ) : (
+          <p className="rounded-xl border border-line bg-inset p-3 text-base">
+            Nobody is enrolled as {isAgent ? 'staff with an employee ID' : 'a customer'} yet — create an account below.
+          </p>
+        ))}
       </div>
 
-      <div className="space-y-1">
-        <label htmlFor="pw" className="block text-sm font-medium">Password</label>
+      <div className="space-y-1.5">
+        <label htmlFor="pw" className="label block">Password</label>
         <input id="pw" type="password" autoComplete="current-password" value={password} disabled={checking}
           onChange={(e) => { setPassword(e.target.value); setError('') }} className={FIELD} />
       </div>
 
-      {error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p>}
+      {error && <p role="alert" className="rounded-xl border border-stop/40 bg-stop/10 p-3 text-base font-semibold text-stop-fg">{error}</p>}
 
       <div className="space-y-2">
-        <button disabled={!chosen || !password || checking}
-          className="btn-primary glow-stamp w-full py-4 text-lg disabled:opacity-40 disabled:shadow-none">
+        <button disabled={!chosen || !password || checking} className="btn-primary min-h-14 w-full py-3.5 text-lg">
+          <LogIn aria-hidden="true" className="h-5 w-5" />
           {checking ? 'Signing in…' : 'Sign in'}
         </button>
-        <p className="text-center text-xs text-slate-500">Demo sign-in — a real bank uses its existing login.</p>
+        <p className="text-center text-[15px] text-muted">Demo sign-in — a real bank uses its existing login.</p>
       </div>
 
-      <p className="text-center text-sm text-slate-600">
-        New here? <Link to={`/enroll?signup=${role}`} className="font-semibold text-tide underline">Create account</Link>
+      <p className="text-center text-base text-muted">
+        New here? <Link to={`/enroll?signup=${role}`} className="font-semibold text-stamp underline underline-offset-2 [.theme-dark_&]:text-tide">Create account</Link>
       </p>
     </form>
   )
@@ -102,32 +114,37 @@ export default function LoginPage({ role }) {
   if (!isAgent) {
     return (
       <PhoneFrame>
-        <div className="flex-1 space-y-6 px-5 pb-8 pt-6">
+        <div className="space-y-6 px-5 pb-8 pt-8">
           <div className="space-y-1">
-            <h1 className="text-2xl font-bold">Sign in</h1>
-            <p className="text-slate-600">Welcome back to SatyaBank.</p>
+            <h1 className="text-[28px] font-bold leading-tight text-navy">Welcome back</h1>
+            <p className="text-base text-muted">Sign in to SatyaBank.</p>
           </div>
-          {form}
+          <div className="card p-5">{form}</div>
         </div>
       </PhoneFrame>
     )
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 px-4 py-10 text-ink">
-      <div className="flex items-center justify-center gap-2">
-        <span className="grid h-10 w-10 place-items-center rounded-xl bg-stamp/20 text-stamp glow-stamp"><ShieldIcon /></span>
-        <span className="text-glow text-2xl font-bold tracking-tight font-stretch-expanded">SatyaBank</span>
-        <span className="text-2xl text-white/75 font-stretch-condensed">Staff</span>
-      </div>
-      <section className="glass space-y-5 p-6">
-        <div className="flex items-center gap-3">
-          <span className="grid h-11 w-11 place-items-center rounded-xl bg-tide/15 text-tide"><DeskIcon /></span>
-          <h1 className="text-2xl font-bold">SatyaBank Staff sign-in</h1>
+    <div className="theme-dark desk-bg min-h-screen">
+      <CyberBackground />
+      <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 px-4 py-10">
+        <div className="flex items-center justify-center gap-3">
+          <LogoMark className="h-11 w-11" />
+          <span className="font-display text-2xl font-extrabold tracking-tight text-white">SatyaBank</span>
+          <span className="rounded-md border border-tide/50 bg-tide/10 px-2 py-0.5 text-[15px] font-semibold text-tide">Agent desk</span>
         </div>
-        {form}
-      </section>
-      <Link to="/" className="text-center text-sm text-slate-500 underline">Back to device chooser</Link>
-    </main>
+        <section className="card space-y-5 p-6">
+          <div className="flex items-center gap-3">
+            <span className="grid h-11 w-11 place-items-center rounded-xl bg-tide/15 text-tide"><MonitorSmartphone aria-hidden="true" className="h-6 w-6" /></span>
+            <h1 className="text-2xl font-bold">Staff sign-in</h1>
+          </div>
+          {form}
+        </section>
+        <Link to="/" className="inline-flex items-center justify-center gap-2 text-base text-muted underline-offset-2 hover:text-white hover:underline">
+          <ArrowLeft aria-hidden="true" className="h-4 w-4" />Back to device chooser
+        </Link>
+      </main>
+    </div>
   )
 }

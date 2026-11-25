@@ -5,17 +5,20 @@
 import { Bar, BarChart, CartesianGrid, Cell, ReferenceArea, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { authenticityText, speakerText } from '../checkText'
 import { useCalm } from '../effects'
+import { AudioWaveform } from 'lucide-react'
+import { ToneIcon } from './Tone'
 
 // Status colours (fixed meaning, always shown with a text label in the legend / tooltip).
-const COLOUR = { green: '#0ca30c', amber: '#fab219', red: '#d03b3b' }
+const COLOUR = { green: '#16a34a', amber: '#f59e0b', red: '#dc2626' }
 const GREY = '#94a3b8'
 
 const LEGEND = [
-  { colour: COLOUR.green, text: 'real voice' },
-  { colour: COLOUR.amber, text: 'mixed, or check unavailable' },
-  { colour: COLOUR.red, text: 'AI voice (fake)' },
-  { colour: GREY, text: 'skipped / no result' },
+  { tone: 'pass', text: 'Real voice' },
+  { tone: 'warn', text: 'Mixed, or check unavailable' },
+  { tone: 'stop', text: 'AI voice (fake)' },
+  { tone: 'skip', text: 'Skipped / no result' },
 ]
+const MONO = 'JetBrains Mono, ui-monospace, monospace'
 
 // Text for a clip that has no score (grey band) — or null if it has one.
 function noScoreText(row) {
@@ -31,7 +34,15 @@ function noScoreText(row) {
 export default function TrustTimeline({ rows }) {
   const calm = useCalm() // call active or "Reduce effects" → no bar animation (saves CPU)
   if (rows.length === 0) {
-    return <p className="text-sm text-slate-500">No clips yet — the first bar appears about 10 s after monitoring starts.</p>
+    return (
+      <div className="grid h-64 place-items-center rounded-xl border border-dashed border-line bg-inset/60 text-center">
+        <div className="max-w-sm space-y-2 px-6">
+          <AudioWaveform aria-hidden="true" className="mx-auto h-10 w-10 text-tide/70" />
+          <p className="text-lg font-semibold text-white">No clips yet</p>
+          <p className="text-base text-muted">Once monitoring starts, the customer's voice is checked every 10 s and each clip lands here as a bar.</p>
+        </div>
+      </div>
+    )
   }
 
   // One chart row per clip, in call order. score stays null when the backend gave none.
@@ -56,22 +67,22 @@ export default function TrustTimeline({ rows }) {
       <div className="h-64 w-full">
         <ResponsiveContainer>
           <BarChart data={data} margin={{ top: 16, right: 16, bottom: 16, left: 0 }}>
-            <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.08)" />
-            <XAxis dataKey="label" tick={{ fontSize: 13, fill: '#c0cad8' }} stroke="rgba(255,255,255,0.25)"
-              label={{ value: 'clip start (seconds into the call)', position: 'insideBottom', offset: -8, fontSize: 13, fill: '#a3b1c6' }} />
-            <YAxis domain={[0, 1]} ticks={[0, 0.25, 0.5, 0.75, 1]} tick={{ fontSize: 13, fill: '#c0cad8' }} stroke="rgba(255,255,255,0.25)" width={48}
-              label={{ value: 'AI score', angle: -90, position: 'insideLeft', offset: 12, fontSize: 13, fill: '#a3b1c6' }} />
+            <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.07)" />
+            <XAxis dataKey="label" tick={{ fontSize: 14, fill: '#cbd5e1', fontFamily: MONO }} stroke="rgba(255,255,255,0.2)"
+              label={{ value: 'clip start (seconds into the call)', position: 'insideBottom', offset: -8, fontSize: 14, fill: '#aebbd0' }} />
+            <YAxis domain={[0, 1]} ticks={[0, 0.25, 0.5, 0.75, 1]} tick={{ fontSize: 14, fill: '#cbd5e1', fontFamily: MONO }} stroke="rgba(255,255,255,0.2)" width={52}
+              label={{ value: 'AI score', angle: -90, position: 'insideLeft', offset: 12, fontSize: 14, fill: '#aebbd0' }} />
 
             {/* Grey band = this clip has no score. Spans the time slot, height means nothing. */}
             {data.filter((d) => d.missing).map((d) => (
               <ReferenceArea key={d.label} x1={d.label} x2={d.label} y1={0} y2={1}
                 fill={GREY} fillOpacity={0.18} stroke="none"
-                label={{ value: d.missing, position: 'insideTop', fontSize: 12, fill: '#c0cad8' }} />
+                label={{ value: d.missing, position: 'insideTop', fontSize: 13, fill: '#cbd5e1' }} />
             ))}
 
             {latestThreshold != null && (
-              <ReferenceLine y={latestThreshold} stroke="#e2e8f0" strokeDasharray="5 4"
-                label={{ value: `threshold ${latestThreshold}`, position: 'insideTopRight', fontSize: 13, fill: '#e2e8f0' }} />
+              <ReferenceLine y={latestThreshold} stroke="#5eead4" strokeDasharray="6 4"
+                label={{ value: `threshold ${latestThreshold}`, position: 'insideTopRight', fontSize: 14, fill: '#5eead4', fontFamily: MONO }} />
             )}
 
             <Tooltip content={<ClipTooltip byLabel={byLabel} />} filterNull={false} cursor={{ fill: 'rgba(255,255,255,0.06)' }} />
@@ -82,20 +93,18 @@ export default function TrustTimeline({ rows }) {
             <Bar dataKey="score" isAnimationActive={!calm} animationDuration={700} animationEasing="ease-out" radius={[4, 4, 0, 0]} maxBarSize={48}
               minPointSize={(value) => (value == null ? 0 : 3)}>
               {data.map((d) => <Cell key={d.label} fill={COLOUR[d.status] ?? GREY}
-                style={{ filter: `drop-shadow(0 0 6px ${COLOUR[d.status] ?? GREY})` }} />)}
+                style={{ filter: `drop-shadow(0 0 4px ${COLOUR[d.status] ?? GREY}88)` }} />)}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>
 
-      <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-600">
+      <ul className="flex flex-wrap gap-x-5 gap-y-2 text-[15px] text-muted">
         {LEGEND.map((l) => (
-          <li key={l.text} className="flex items-center gap-1">
-            <span className="inline-block h-3 w-3 rounded-sm" style={{ background: l.colour, boxShadow: `0 0 8px ${l.colour}` }} /> {l.text}
-          </li>
+          <li key={l.text} className="flex items-center gap-1.5"><ToneIcon tone={l.tone} className="h-4 w-4" />{l.text}</li>
         ))}
-        <li className="flex items-center gap-1">
-          <span className="inline-block w-5 border-t-2 border-dashed border-slate-700" /> threshold (from the response)
+        <li className="flex items-center gap-1.5">
+          <span className="inline-block w-5 border-t-2 border-dashed border-tide" /> Threshold (from the response)
         </li>
       </ul>
     </div>
@@ -109,16 +118,16 @@ function ClipTooltip({ active, label, byLabel }) {
   const { row } = d
   const r = row.result
   return (
-    <div className="max-w-xs space-y-0.5 rounded-xl border border-white/15 bg-night/95 p-3 text-sm text-ink shadow-xl backdrop-blur">
+    <div className="max-w-sm space-y-1 rounded-xl border border-white/15 bg-navy p-3 text-[15px] text-white shadow-xl">
       <p className="font-semibold">{row.t_start}–{row.t_end} s · {r ? `status ${r.status}` : d.missing}</p>
       {r ? (
         <>
           <p><b>Aletheia:</b> {r.status === 'skipped' ? 'skipped — too little speech (free, not scored)' : authenticityText(r.authenticity)}</p>
           <p><b>Eidos:</b> {speakerText(r.speaker, 'not checked — timeline uses Aletheia only')}</p>
-          <p className="text-slate-500">call state {r.call_state} · {r.latency_ms} ms</p>
+          <p className="text-muted">call state {r.call_state} · <span className="font-mono">{r.latency_ms} ms</span></p>
         </>
       ) : (
-        row.error && <p className="text-slate-600">{row.error}</p>
+        row.error && <p className="text-muted">{row.error}</p>
       )}
     </div>
   )

@@ -1,5 +1,6 @@
 // "Sign out" for both headers: clear the demo session, go to that role's sign-in page.
 import { useNavigate } from 'react-router-dom'
+import { LogOut } from 'lucide-react'
 import { clearSession, LOGIN_PATH } from '../session'
 
 export default function SignOutButton({ role, className = '' }) {
@@ -10,7 +11,8 @@ export default function SignOutButton({ role, className = '' }) {
   }
   return (
     <button type="button" onClick={signOut}
-      className={`rounded-lg border border-white/15 px-3 py-1.5 text-sm text-white/80 hover:bg-white/10 hover:text-white ${className}`}>
+      className={`btn-ghost px-3 py-2 text-[15px] ${className}`}>
+      <LogOut aria-hidden="true" className="h-4 w-4" />
       Sign out
     </button>
   )
