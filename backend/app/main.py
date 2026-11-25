@@ -5,6 +5,7 @@ import json
 import re
 from collections import defaultdict
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, timezone
 from typing import Literal, Optional
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect
@@ -450,4 +451,87 @@ async def say_it_back(call_id: str, file: UploadFile = File(...), attempt: int =
     if new_state != call["state"]:
         await hub.send(call_id, {"type": "state_change", "data": {
             "from": call["state"], "to": new_state, "reason": "Say-It-Back passed: words, voice and authenticity"}})
+    return result
+
+
+# ---------- A7: Verify This Caller (customer side) ----------
+
+CALL_LOG_WINDOW_MIN = 30   # PLAN §3: outbound call started <= 30 min ago
+
+
+def employee_number(text) -> str:
+    """'emp-4521', 'EMP-4521', '4521' -> '4521' (the frontend sends whatever was typed)."""
+    t = str(text or "").strip()
+    return t[4:] if t.lower().startswith("emp-") else t
+
+
+def canonical_customer(text) -> str:
+    """'balaji' or 'cust-balaji' -> 'cust-balaji' (the speaker_id, via the people table if enrolled)."""
+    t = str(text or "").strip()
+    row = db.conn.execute("SELECT speaker_id FROM people WHERE person_id = ? OR speaker_id = ?", (t, t)).fetchone()
+    if row:
+        return row["speaker_id"]
+    return t if t.startswith("cust-") else f"cust-{slug(t)}"
+
+
+def find_call_log(employee_id: str, customer_id: str):
+    """The bank's own record: an ACTIVE outbound call from this employee to this customer, started
+    within the last 30 minutes. Returns (row or None, human-readable detail)."""
+    since = (datetime.now(timezone.utc) - timedelta(minutes=CALL_LOG_WINDOW_MIN)).isoformat()
+    want_emp, want_cust = employee_number(employee_id), canonical_customer(customer_id)
+    rows = db.conn.execute(
+        "SELECT * FROM call_log WHERE ended_at IS NULL AND started_at >= ? ORDER BY id DESC", (since,)).fetchall()
+    for r in rows:
+        if employee_number(r["employee_id"]) == want_emp and canonical_customer(r["customer_id"]) == want_cust:
+            return r, f"Active outbound call {r['call_id']} from employee {want_emp} to you, started {r['started_at']}"
+    return None, (f"No active outbound call from employee {want_emp} to you in the last "
+                  f"{CALL_LOG_WINDOW_MIN} minutes in the bank's call log")
+
+
+@app.post("/api/verify-caller")
+async def verify_caller(file: UploadFile = File(...), employee_id: str = Form(...), customer_id: str = Form(...)):
+    """Customer asks 'is this really my bank?'. VERIFIED only if: (1) the bank's call log has an active
+    outbound call from that employee to this customer, (2) Eidos 'match' vs emp-<id>, (3) Aletheia 'real'.
+    v3 rule 2(c): no call-log entry -> we don't run the voice check at all (saves ~520 credits)."""
+    emp_no = employee_number(employee_id)
+    employee = db.conn.execute(
+        "SELECT display_name, department, speaker_id FROM people WHERE role = 'agent' AND employee_id = ?",
+        (emp_no,)).fetchone()
+    audio = await file.read()
+    if not audio:
+        raise HTTPException(400, "empty file")
+
+    log_row, detail = find_call_log(employee_id, customer_id)
+    call_log = {"pass": log_row is not None, "detail": detail}
+
+    if log_row and employee:
+        outcome = await detectif.verify_with_deepfake(employee["speaker_id"], audio, file.filename or "caller.webm")
+    else:
+        reason = ("voice not checked: no matching call in the bank's call log (saves ~520 credits)" if not log_row
+                  else f"voice not checked: employee {emp_no} has no enrolled voice")
+        not_run = {"code": "not_checked", "message": reason}
+        outcome = {"check": {"authenticity": {"verdict": "error", "score": None, "threshold": None, "segments": [],
+                                              "operation_id": None, "error": not_run},
+                             "speaker": detectif.speaker_not_checked(), "raw": {}},
+                   "skipped": False, "status_code": 0, "latency_ms": 0, "credits_balance": detectif.last_balance()}
+    check = outcome["check"]
+
+    verified = (call_log["pass"] and check["speaker"]["decision"] == "match"
+                and check["authenticity"]["verdict"] == "real")
+    if verified:
+        next_step = f"Verified: {employee['display_name']}, {employee['department']}. You can continue the call."
+    elif outcome["skipped"]:
+        next_step = "Not enough of the caller's voice was heard. Put the call on speaker and record again."
+    else:
+        next_step = ("Can't confirm this caller. Hang up and call the official number on the back of your card. "
+                     "Never share an OTP, PIN or password on a call you didn't make.")
+
+    result = {
+        "verified": verified,
+        "checks": {"call_log": call_log, "speaker": check["speaker"], "authenticity": check["authenticity"]},
+        "employee": {"name": employee["display_name"], "department": employee["department"]} if employee else None,
+        "next_step": next_step,
+    }
+    save_evidence(log_row["call_id"] if log_row else None, "verify_caller",
+                  hashlib.sha256(audio).hexdigest(), outcome, "verified" if verified else "not_verified")
     return result
