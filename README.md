@@ -1,5 +1,7 @@
 # SatyaCall — a two-way voice trust layer for bank calls
+## 🎥 Demo video
 
+**[Watch the SatyaCall demo](https://drive.google.com/file/d/1Vo2zmaKKzcW3xtfYleVJDGOVYzDxYR6Y/view?usp=drive_link)**: a live call on two devices, with the AI-voice timeline, Say-It-Back approval, and the customer verifying a real bank call.
 Ananth AI Hackathon 2K26 × DetectifAI · Track 03 **The Trust Layer** · built today by a team of 2.
 
 ## The problem
