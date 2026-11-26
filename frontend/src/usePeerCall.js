@@ -9,6 +9,12 @@ import { createPeer, isValidPeerId, micErrorText, peerErrorText, readLink } from
 // Verify-caller recorder (AppPage) turns them off — it uses its own getUserMedia, not this one.
 const CALL_MIC = { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
 
+// "Hang-up" notice to the other side. PeerJS tells nobody when a call is closed BEFORE it is
+// answered (there is no WebRTC connection yet), so the other side would keep ringing. We send a
+// tiny DataConnection whose metadata says which call ended; the metadata travels in the offer
+// through the signalling server, so it arrives even if the data channel itself never opens.
+const HANGUP = 'satyacall-hangup'
+
 export function usePeerCall() {
   const peerRef = useRef(null) // our Peer (connection to the signalling server)
   const micRef = useRef(null)  // our mic MediaStream (sent to the other side)
@@ -56,6 +62,21 @@ export function usePeerCall() {
     setStatus(nextStatus)
   }
 
+  // Tell the other side this call is over (cancelled, declined, busy or hung up).
+  // Best effort: if they are already offline, nothing to tell.
+  const sendHangup = (call, reason = 'hangup') => {
+    const peer = peerRef.current
+    if (!peer?.open || !call?.peer) return
+    try {
+      const conn = peer.connect(call.peer, { metadata: { type: HANGUP, callId: call.connectionId, reason } })
+      if (!conn) return
+      const close = () => { try { conn.close() } catch { /* already closed */ } }
+      conn.on('open', close)
+      conn.on('error', () => {})
+      setTimeout(close, 5000) // the notice went out with the offer; don't keep the channel
+    } catch { /* lost the peer server: the other side stops ringing at its own 45 s limit */ }
+  }
+
   // Listen to a call's events (both directions).
   const watchCall = (call) => {
     callRef.current = call
@@ -92,14 +113,30 @@ export function usePeerCall() {
 
     // Incoming call: ring and wait for "Answer". Busy → refuse it.
     peer.on('call', (call) => {
-      if (callRef.current) return call.close()
+      if (callRef.current) { sendHangup(call, 'busy'); return call.close() }
       watchCall(call)
       setDirection('inbound')
       setIncoming(true)
       setStatus('ringing')
     })
 
+    // The other side's hang-up notice: drop that call if it is still ours (stops the ringing and
+    // the Answer / Decline buttons). Any other data connection is closed: we only use calls.
+    peer.on('connection', (conn) => {
+      const m = conn.metadata
+      const call = callRef.current
+      if (m?.type === HANGUP && call && call.connectionId === m.callId) {
+        dropCall(call)
+        call.close()
+        if (m.reason === 'busy') setError('The other side is busy on another call — try again later.')
+      }
+      // Next tick: PeerJS still feeds this connection its queued messages right after the event.
+      setTimeout(() => { try { conn.close() } catch { /* already closed */ } }, 0)
+    })
+
     peer.on('error', (err) => {
+      // A hang-up notice to someone who already went offline: nothing to show.
+      if (err.type === 'peer-unavailable' && !callRef.current) return
       setError(peerErrorText(err, id, callRef.current?.peer))
       // Calling someone who isn't online: forget that call, we're still online.
       if (err.type === 'peer-unavailable') dropCall(callRef.current, 'online')
@@ -145,9 +182,11 @@ export function usePeerCall() {
     setIncoming(false)
   }
 
-  // Hang up (or decline): close the call only; mic and peer stay on for the next call.
+  // Hang up (or decline / cancel): tell the other side, then close the call only; mic and peer
+  // stay on for the next call.
   const hangUp = () => {
     const call = callRef.current
+    sendHangup(call)
     dropCall(call)
     call?.close()
   }

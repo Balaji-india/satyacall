@@ -2,7 +2,8 @@
 // audio player. `call` is the object returned by usePeerCall(). (The customer phone has its own
 // full-screen call screen: PhoneCallScreen.jsx, which reuses LinkBadge from here.)
 import { useEffect, useRef, useState } from 'react'
-import { Mic, MicOff, Phone, PhoneOff, Volume2, VolumeX } from 'lucide-react'
+import { Bell, BellOff, Mic, MicOff, Phone, PhoneOff, Volume2, VolumeX } from 'lucide-react'
+import { useRingSound } from '../ringtone'
 
 function statusText({ status, myId, otherId, incoming }) {
   switch (status) {
@@ -25,6 +26,8 @@ export default function CallPanel({ call, onHangUp = call.hangUp }) {
   // untouched, so the agent's clip / Say-It-Back recording keeps getting the customer's voice.
   const [speakerMuted, setSpeakerMuted] = useState(false)
   const hangUp = call.incoming ? call.hangUp : onHangUp
+  // Ringtone (incoming) / ringback (our outgoing call) — never while this window's speaker is muted.
+  const [ringOn, setRingOn] = useRingSound(call, speakerMuted)
 
   const speakerToggle = (
     <button type="button" onClick={() => setSpeakerMuted((v) => !v)} aria-pressed={speakerMuted}
@@ -62,11 +65,25 @@ export default function CallPanel({ call, onHangUp = call.hangUp }) {
           <PhoneOff aria-hidden="true" className="h-4 w-4" />{call.incoming ? 'Decline' : 'Hang up'}
         </button>
           {speakerToggle}
+          <RingToggle on={ringOn} onChange={setRingOn}
+            className={`rounded-xl border px-3 py-2 ${ringOn ? 'border-line bg-inset' : 'border-warn/60 bg-warn/15 text-warn-fg'}`} />
         </div>
       </div>
       {errorBox}
       <RemoteAudio stream={call.remoteStream} muted={speakerMuted} />
     </div>
+  )
+}
+
+// "Ring sound" on/off (ringtone + ringback, this browser tab). Shared by CallPanel + PhoneCallScreen.
+export function RingToggle({ on, onChange, className = '' }) {
+  return (
+    <button type="button" onClick={() => onChange(!on)} aria-pressed={on}
+      title="Ringtone for incoming calls, ringback while your call is waiting"
+      className={`inline-flex items-center gap-2 whitespace-nowrap text-base font-semibold transition-colors ${className}`}>
+      {on ? <Bell aria-hidden="true" className="h-4 w-4" /> : <BellOff aria-hidden="true" className="h-4 w-4" />}
+      {on ? 'Ring sound on' : 'Ring sound off'}
+    </button>
   )
 }
 
