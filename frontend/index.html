@@ -3,7 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover: on phones with a notch / home bar the app draws edge to edge and pads
+         itself with env(safe-area-inset-*). theme-color = SatyaBank header blue for the browser bar. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0284C7" />
     <title>SatyaCall</title>
     <!-- Fonts are bundled (@fontsource-variable, imported in src/main.jsx): nothing is fetched
          from the internet, so the demo works offline. -->

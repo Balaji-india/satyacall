@@ -243,6 +243,15 @@
 .orb-ring { width: 86%; height: 28%; border-radius: 9999px; border: 1.5px solid rgb(212 175 106 / 0.85); transform: rotate(-16deg); }
 .orb-ring.b { width: 98%; height: 40%; border-width: 1px; border-color: rgb(212 175 106 / 0.45); transform: rotate(14deg); }
 
+/* Customer call screen (PhoneCallScreen.jsx, B17): full-screen ocean, light at the top
+   (behind the status line), deep ocean at the bottom (behind the buttons), a faint gold glow. */
+.call-screen {
+  background:
+    radial-gradient(90% 45% at 50% 0%, rgb(56 189 248 / 0.28), transparent 70%),
+    radial-gradient(70% 35% at 50% 105%, rgb(212 175 106 / 0.14), transparent 70%),
+    linear-gradient(180deg, #0369a1 0%, #075985 26%, #0b2533 68%, #071a24 100%);
+}
+
 /* Calm mode (body.calm, see effects.js): during a call / recording, or "Reduce effects". */
 body.calm .glass { backdrop-filter: none; }
 body.calm .theme-phone .glass { background: #fff; }
@@ -266,6 +275,7 @@ body.calm .theme-dark .glass { background: #0e2a38; }
 @keyframes live { 0% { box-shadow: 0 0 0 0 rgb(20 184 166 / 0.6); } 100% { box-shadow: 0 0 0 8px rgb(20 184 166 / 0); } }
 @keyframes ring { 0% { box-shadow: 0 0 0 0 rgb(220 38 38 / 0.45); } 100% { box-shadow: 0 0 0 14px rgb(220 38 38 / 0); } }
 @keyframes gold-pulse { 0% { box-shadow: 0 0 0 0 rgb(212 175 106 / 0.55); } 100% { box-shadow: 0 0 0 18px rgb(212 175 106 / 0); } }
+@keyframes answer-ring { 0% { box-shadow: 0 0 0 0 rgb(22 163 74 / 0.7); } 100% { box-shadow: 0 0 0 20px rgb(22 163 74 / 0); } }
 @keyframes pulse-soft { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
 
 /* All motion is opt-in: nothing moves for people who asked for reduced motion. */
@@ -274,4 +284,5 @@ body.calm .theme-dark .glass { background: #0e2a38; }
   .rec-ring { animation: ring 1.2s ease-out infinite; }
   .ringing { animation: pulse-soft 1.2s ease-in-out infinite; }
   .gold-pulse { animation: gold-pulse 2.4s ease-out infinite; }
+  .answer-ring { animation: answer-ring 1.4s ease-out infinite; }
 }
