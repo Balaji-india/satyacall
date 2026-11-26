@@ -2,21 +2,24 @@
 // The browser only ever talks to OUR backend; the DetectifAI key stays there.
 // No mock or fallback data: if the backend fails, the caller gets an Error.
 
-const BASE = import.meta.env.VITE_API_URL
+// VITE_USE_PROXY=true → "" = same origin: the Vite dev server forwards /api to the backend
+// (needed on https, where calling an http:// backend directly is blocked as mixed content).
+const USE_PROXY = import.meta.env.VITE_USE_PROXY === 'true'
+const BASE = USE_PROXY ? '' : import.meta.env.VITE_API_URL
 
 // Shared fetch helper. On non-2xx it throws an Error with:
 //   err.status — HTTP status (422 = "too little speech", free, show as "skipped")
 //   err.body   — parsed JSON body (or raw text) from the backend
 // No status (backend not reached) → err.message is already a readable sentence.
 async function request(path, options = {}) {
-  if (!BASE) throw new Error('VITE_API_URL is not set in frontend/.env — set it, then restart npm run dev.')
+  if (!USE_PROXY && !BASE) throw new Error('VITE_API_URL is not set in frontend/.env — set it, then restart npm run dev.')
   let res
   try {
     res = await fetch(`${BASE}${path}`, options)
   } catch (cause) {
     throw new Error(cause?.name === 'AbortError'
       ? 'the backend did not answer in time'
-      : `cannot reach the backend at ${BASE} — is it running and on the same network?`)
+      : `cannot reach the backend at ${BASE || 'this server (proxy)'} — is it running and on the same network?`)
   }
   const text = await res.text()
   let body = text

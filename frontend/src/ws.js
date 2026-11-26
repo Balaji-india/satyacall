@@ -2,7 +2,11 @@
 // Server sends JSON { type, data } where type is:
 //   "clip_result" | "state_change" | "say_it_back_result"
 
-const WS_BASE = import.meta.env.VITE_WS_URL
+// VITE_USE_PROXY=true → same origin (wss:// on an https page, ws:// on http); the Vite dev
+// server forwards /ws to the backend. Otherwise VITE_WS_URL as before.
+const WS_BASE = import.meta.env.VITE_USE_PROXY === 'true'
+  ? `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`
+  : import.meta.env.VITE_WS_URL
 
 // Opens ws://<backend>/ws/calls/{callId}; calls onMessage({ type, data }) for every message.
 // Optional onStatus("open" | "closed" | "error") so the UI can show whether live updates work.
